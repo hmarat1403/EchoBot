@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: a6314da3bbb27e6436416ab05bbd7b1b87532f8ed41b531fde0fe5ac91c64742
+-- hash: 939cc103ec03ddf96993848c9dde89e466a41004da70bd2a949c9a5d756b6d9b
 
 name:           EchoBot
 version:        0.1.0.0
@@ -27,6 +27,7 @@ source-repository head
 
 library
   exposed-modules:
+      GetRequest
       Parser
   other-modules:
       Paths_EchoBot
@@ -36,6 +37,7 @@ library
       base >=4.7 && <5
     , bytestring
     , http-conduit
+    , http-types
     , lens
     , lens-aeson
     , text
@@ -53,6 +55,7 @@ executable EchoBot-exe
     , base >=4.7 && <5
     , bytestring
     , http-conduit
+    , http-types
     , lens
     , lens-aeson
     , text
@@ -71,6 +74,7 @@ test-suite EchoBot-test
     , base >=4.7 && <5
     , bytestring
     , http-conduit
+    , http-types
     , lens
     , lens-aeson
     , text
