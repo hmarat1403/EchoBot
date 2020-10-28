@@ -1,0 +1,14 @@
+Request {
+  host                 = "api.telegram.org"
+  port                 = 443
+  secure               = True
+  requestHeaders       = []
+  path                 = "/bot1283454588:AAEfW-xN5ftFrvOTOtSMDUbXKu4N1bmmTYk/sendMessage"
+  queryString          = "?chat_id=614000958&text=%16%5Cud83d%5Cude02"
+  method               = "GET"
+  proxy                = Nothing
+  rawBody              = False
+  redirectCount        = 10
+  responseTimeout      = ResponseTimeoutDefault
+  requestVersion       = HTTP/1.1
+}
