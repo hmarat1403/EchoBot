@@ -2,9 +2,14 @@
 module Main where
 
 import Parser (someFunc)
+import Data.Aeson
+import JsonData
+import qualified Data.ByteString as B
+import qualified Data.ByteString.Lazy as L
 import Network.HTTP.Simple
 import Network.HTTP.Types (Status(..))
 import qualified Data.ByteString.Char8 as BC 
+import qualified Data.ByteString.Lazy.Char8 as LBC 
 --import Data.Aeson.Lens
 --import Control.Lens
 import GetRequest (prepareMessage, getUpdate)
@@ -18,20 +23,31 @@ main = do
     let forFile = show temp
     writeFile "request.json" forFile
     -- 
-    response <- httpBS temp 
+    response <- httpLBS temp 
     upd <- getUpdate
-    update <- httpBS . parseRequestThrow_ . BC.unpack $ upd
+    update <- httpLBS . parseRequestThrow_ . BC.unpack $ upd
     let code = statusCode . getResponseStatus $ response
     let error = statusMessage . getResponseStatus $ response
     if code == 200
     then do
         putStrLn "saving request to file\n\n"
-        -- for testing
         let jsonBody = getResponseBody update
-        BC.writeFile "data.json" jsonBody
+        -- for testing
+        L.writeFile "data.json" jsonBody
         --
     else print $ "request failed: code-" <> show code 
          <> "; message-" <> show error
+
+test :: IO ()
+test = do
+    jsonBody <- L.readFile "data.json" 
+    let telegramResponse = decode jsonBody
+    --case telegramResponse of 
+    --    Nothing -> print "cannot parse"
+    --   Just res -> print res
+   -- print telegramResponse
+    let telegramResults = result <$> telegramResponse
+    printResults telegramResults
 
 chatID :: IO BC.ByteString
 chatID = return "614000958"    
