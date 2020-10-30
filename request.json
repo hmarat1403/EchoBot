@@ -4,7 +4,7 @@ Request {
   secure               = True
   requestHeaders       = []
   path                 = "/bot1283454588:AAEfW-xN5ftFrvOTOtSMDUbXKu4N1bmmTYk/sendMessage"
-  queryString          = "?chat_id=614000958&text=fenk"
+  queryString          = "?chat_id=614000958&text=oipupuopo"
   method               = "GET"
   proxy                = Nothing
   rawBody              = False

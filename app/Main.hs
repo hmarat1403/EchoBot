@@ -3,7 +3,7 @@ module Main where
 
 import Parser (someFunc)
 import Data.Aeson
-import JsonData
+import TelegramAPI
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as L
 import Network.HTTP.Simple
@@ -41,13 +41,14 @@ main = do
 test :: IO ()
 test = do
     jsonBody <- L.readFile "data.json" 
-    let telegramResponse = decode jsonBody
-    --case telegramResponse of 
-    --    Nothing -> print "cannot parse"
-    --   Just res -> print res
-   -- print telegramResponse
-    let telegramResults = result <$> telegramResponse
-    printResults telegramResults
+   -- let telRes = encode jsonBody
+    let telegramResponse = eitherDecode jsonBody
+    case telegramResponse of 
+        Left error -> print $ "cannot parse" <> error
+        Right res -> do 
+            let telegramResults = result <$> res
+            printResults telegramResults
+    
 
 chatID :: IO BC.ByteString
 chatID = return "614000958"    
