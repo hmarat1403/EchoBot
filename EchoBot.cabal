@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 99513bada2d03785a3e1e7f2c6df6e8b59cc07403088e0ec81d35ebc5dd7aa47
+-- hash: eca0379cd4fdd9b60b06c551319b9974394256874ad2ec392b0b9d68509fbc80
 
 name:           EchoBot
 version:        0.1.0.0
@@ -27,8 +27,8 @@ source-repository head
 
 library
   exposed-modules:
-      GetRequest
       Parser
+      Request
       TelegramAPI
   other-modules:
       Paths_EchoBot
@@ -36,6 +36,7 @@ library
       src
   build-depends:
       aeson
+    , aeson-utils
     , base >=4.7 && <5
     , bytestring
     , http-conduit
@@ -54,6 +55,7 @@ executable EchoBot-exe
   build-depends:
       EchoBot
     , aeson
+    , aeson-utils
     , base >=4.7 && <5
     , bytestring
     , http-conduit
@@ -73,6 +75,7 @@ test-suite EchoBot-test
   build-depends:
       EchoBot
     , aeson
+    , aeson-utils
     , base >=4.7 && <5
     , bytestring
     , http-conduit

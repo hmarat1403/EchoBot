@@ -4,24 +4,24 @@ module TelegramAPI where
 import qualified Data.Text as T
 import GHC.Generics hiding (from)
 import Data.Aeson
-import Control.Monad
-import Data.Maybe ( fromMaybe )
+    ( Value(Object), FromJSON(parseJSON), (.:), (.:?) )
+import Control.Monad ( forM_ )
 
 -- telegram responce type
 data TelegramResponse = Response 
                         { ok :: Bool
-                        , result :: [Results]
+                        , result :: [Update]
                         } deriving (Show, Generic)
 instance FromJSON TelegramResponse             
 
 -- last 24 hours updates list type
-data Results = Results
+data Update = Update
               { update_id :: Int
-              , message :: Message 
-          --    , channel_post :: Maybe Message
+              , message :: Maybe Message 
+              , inline_query :: Maybe InlineQuery
+              , channel_post :: Maybe Message
               } deriving (Show, Generic)
-instance FromJSON Results
-                                
+instance FromJSON Update
 data Message = Message
                { message_id :: Int
                , from :: Maybe User
@@ -39,20 +39,35 @@ data Message = Message
                , caption :: Maybe T.Text
                , contact :: Maybe Contact
                } deriving (Show, Generic)
-instance FromJSON Message            
+instance FromJSON Message 
+data InlineQuery = InlineQuery
+                   { idIQ :: T.Text
+                   , fromIQ :: User
+                   , queryIQ :: T.Text
+                   , offsetIQ :: T.Text
+                   } deriving Show
+instance FromJSON InlineQuery where
+    parseJSON (Object v) = 
+        InlineQuery <$> v .: "id"
+                    <*> v .: "from"
+                    <*> v .: "query"
+                    <*> v .: "offset"                                              
 data MessageEntity = MessageEntity
                      { entityType :: T.Text
                      , offset :: Int
                      , entiityLength :: Int
+                     , url :: Maybe T.Text
+                     , userME :: Maybe User
+                     , languageME :: Maybe T.Text
                      } deriving Show
 instance FromJSON MessageEntity  where
     parseJSON (Object v) = 
         MessageEntity   <$> v .: "type"
                         <*> v .: "offset"
                         <*> v .: "length"
-                 --       <*> v .: "url"
-                 --       <*> v .: "user"
-                 --       <*> v .: "language"                      
+                        <*> v .:? "url"
+                        <*> v .:? "user"
+                        <*> v .:? "language"                      
 data PhotoSize = PhotoSize 
             { file_id :: T.Text
             , file_unique_id :: T.Text
@@ -61,7 +76,7 @@ data PhotoSize = PhotoSize
             , height :: Int
             } deriving (Show, Generic)
 instance FromJSON PhotoSize         
-data User = From 
+data User = User 
             { id :: Int
             , is_bot :: Bool
             , first_name :: T.Text
@@ -88,24 +103,26 @@ instance FromJSON Animation where
                     <*> v .: "width"
                     <*> v .: "height"
                     <*> v .: "duration"
-                    <*> v .: "thumb"
-                    <*> v .: "file_name"
-                    <*> v .: "mime_type"
-                    <*> v .: "file_size" 
+                    <*> v .:? "thumb"
+                    <*> v .:? "file_name"
+                    <*> v .:? "mime_type"
+                    <*> v .:? "file_size" 
 data Chat = Chat
             { chat_id :: Int
+            , chat_Type :: T.Text
+            , chatTitle :: Maybe T.Text
             , chat_FirstName :: Maybe T.Text
             , chat_LastName :: Maybe T.Text
             , chat_UserName :: Maybe T.Text
-            , chat_Type :: T.Text
             } deriving Show         
 instance FromJSON Chat where
     parseJSON (Object v) = 
            Chat <$> v .: "id"
-                <*> v .: "first_name"
-                <*> v .: "last_name"
-                <*> v .: "username"
-                <*> v .: "type"    
+                <*> v .: "type"
+                <*> v .:? "title"
+                <*> v .:? "username"
+                <*> v .:? "first_name"
+                <*> v .:? "last_name"                               
 data Audio = Audio 
             { file_idAud :: T.Text
             , file_unique_idAud :: T.Text
@@ -173,12 +190,15 @@ instance FromJSON Contact where
     parseJSON (Object v) =
         Contact <$> v .: "phone_number" 
                 <*> v .: "first_name"
-                <*> v .: "last_name"
-                <*> v .: "user_id"
-                <*> v .: "vcard"
+                <*> v .:? "last_name"
+                <*> v .:? "user_id"
+                <*> v .:? "vcard"
                                                                                                                       
-printResults :: Maybe [Results] -> IO ()
+printResults :: Maybe [Update] -> IO ()
 printResults Nothing = print "error loading data"
 printResults (Just results) = do
-   forM_ results (print . text . message) 
+    forM_ results (\s -> 
+       case message s of
+           Just mes -> print . sticker $ mes 
+           Nothing  -> print "Exception!") 
     

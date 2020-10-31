@@ -3,8 +3,8 @@ Request {
   port                 = 443
   secure               = True
   requestHeaders       = []
-  path                 = "/bot1283454588:AAEfW-xN5ftFrvOTOtSMDUbXKu4N1bmmTYk/sendMessage"
-  queryString          = "?chat_id=614000958&text=oipupuopo"
+  path                 = "/bot1283454588:AAEfW-xN5ftFrvOTOtSMDUbXKu4N1bmmTYk/sendSticker"
+  queryString          = "?chat_id=614000958&sticker=CAACAgIAAxkBAAM2X5w9OCBV-qkirJ1TQZzvKatBMB4AAskBAAJWnb0KddhwxIgZLo0bBA"
   method               = "GET"
   proxy                = Nothing
   rawBody              = False

@@ -12,8 +12,7 @@ import qualified Data.ByteString.Char8 as BC
 import qualified Data.ByteString.Lazy.Char8 as LBC 
 --import Data.Aeson.Lens
 --import Control.Lens
-import GetRequest (prepareMessage, getUpdate)
-
+import Request (prepareMessage, getUpdate)
 
 main :: IO ()
 main = do
@@ -55,6 +54,9 @@ chatID = return "614000958"
 
 messageIO :: IO BC.ByteString
 messageIO = do
-    putStrLn "Input your message"
-    mess <- BC.getLine
+    putStrLn "Sending message"
+    let mess = fileID
     return mess
+
+fileID :: BC.ByteString
+fileID = "CAACAgIAAxkBAAM2X5w9OCBV-qkirJ1TQZzvKatBMB4AAskBAAJWnb0KddhwxIgZLo0bBA" 
