@@ -3,14 +3,20 @@ module Request where
 
 import qualified Data.ByteString.Char8 as BC
 import qualified Data.Text as T 
+import TelegramAPI  (PrefixMessage, SendingMethod,  ChatID
+                    , ReseivedMessage
+                    , getMessageContent
+                    , getMessageChatID )
 import GHC.Generics
 import Data.Aeson
 import Data.Aeson.Utils
+import Data.Int (Int)
 --import Network.HTTP.Simple
 
 type Host = BC.ByteString
 type Path = BC.ByteString
 type Token = BC.ByteString
+type TelRequestBody = BC.ByteString
 
 data TelegramRequest = TelegramRequest
                        { hostTel :: Host
@@ -32,18 +38,18 @@ data SendMessage = SendMessage
                    , text :: BC.ByteString
                    , reply_markup :: ReplyKeyboardMarkUp
                    } deriving (Show, Generic)
---instance ToJSON SendMessage   
+
 
 data ReplyKeyboardMarkUp = ReplyKeyboardMarkUp
                            { keyBoard :: [[KeyboardButton]]
                            , one_time_keyboard :: Bool
                            } deriving (Show, Generic)
---instance ToJSON ReplyKeyboardMarkUp                                             
+                                           
             
 data KeyboardButton = KeyboardButton 
                       { textKB :: BC.ByteString
                       } deriving (Show, Generic)
---instance ToJSON KeyboardButton           
+       
 
 data GetUpdates = GetUpdates
                  { offset :: Int
@@ -51,110 +57,80 @@ data GetUpdates = GetUpdates
                  , timeout :: Int
                  , allowed_updates :: [BC.ByteString]
                  } deriving (Show, Generic)
---instance ToJSON GetUpdates                   
+         
 
 data SendPhoto = SendPhoto 
                  { photoChat_id :: Int
-                 , photo :: BC.ByteString
+                 , photo :: BC.ByteString -- file_id
+                 , photoCaption :: BC.ByteString
                  } deriving Show 
--- instance ToJSON SendPhoto where
---     toJSON (SendPhoto photoChat_id photo) 
---             = object [ "chat_id" .= photoChat_id
---                      , "photo" .= photo
---                      ]
+
 data SendAnimation = SendAnimation
                      { animationChat_id :: Int
                      , animation :: BC.ByteString
+                     , animationCaption :: BC.ByteString
                      } deriving Show
--- instance ToJSON SendAnimation where
---     toJSON (SendAnimation animationChat_id animation) 
---             = object [ "chat_id" .= animationChat_id
---                      , "animation" .= animation
---                      ]                           
+                        
 data SendAudio = SendAudio
                  { audioChat_id :: Int
                  , audio :: BC.ByteString
+                 , audioCaption :: BC.ByteString
                  } deriving Show
--- instance ToJSON SendAudio where
---     toJSON (SendAudio audioChat_id audio) 
---             = object [ "chat_id" .= audioChat_id
---                      , "audio" .= audio
---                      ]    
+  
 data SendContact = SendContact
                    { contactChat_id :: Int
                    , phone_number :: BC.ByteString
                    , contactFirst_name :: BC.ByteString
-              --     , contactLast_name :: Maybe BC.ByteString
-              --    , vcard :: Maybe BC.ByteString
                    } deriving Show
--- instance ToJSON SendContact where
---     toJSON (SendContact contactChat_id phone_number contactFirst_name) 
---             = object [ "chat_id" .= contactChat_id
---                      , "phone_number" .= phone_number
---                      , "first_name" .= contactFirst_name
---                      ]        
+     
 data SendDocument = SendDocument
                     { documentChat_id :: Int
                     , document :: BC.ByteString
-                    } deriving Show
--- instance ToJSON SendDocument where
---     toJSON (SendDocument documentChat_id document) 
---             = object [ "chat_id" .= documentChat_id
---                      , "document" .= document
---                      ]       
+                    , documentCaption :: BC.ByteString
+                     } deriving Show
+ 
 data SendVideo = SendVideo
                  { videoChat_id :: Int
                  , video :: BC.ByteString
+                 , videoCaption :: BC.ByteString
                  } deriving Show
--- instance ToJSON SendVideo where
---     toJSON (SendVideo videoChat_id video) 
---             = object [ "chat_id" .= videoChat_id
---                      , "video" .= video
---                      ]        
+     
 data SendVoice = SendVoice
                  { voiceChat_id :: Int
                  , voice :: BC.ByteString
+                 , voiceCaption :: BC.ByteString
                  } deriving Show
--- instance ToJSON SendVoice where
---     toJSON (SendVoice voiceChat_id voice) 
---             = object [ "chat_id" .= voiceChat_id
---                      , "voice" .= voice
---                      ]     
+   
 data SendSticker = SendSticker
                    { stickerChat_id :: Int
                    , sticker :: BC.ByteString -- file_id
                    } deriving Show
--- instance ToJSON SendSticker where
---     toJSON (SendSticker stickerChat_id sticker) 
---             = object [ "chat_id" .= stickerChat_id
---                      , "photo" .= sticker
---                      ]                                                                                                                                                                                                         
+                                                                                                                                                                                                       
 botTelegramHost :: Host
 botTelegramHost = "https://api.telegram.org" 
 botTelegramPath ::Path
 botTelegramPath = "/bot"  
-    
 
-buildRequest :: Host -> Path -> Token -> BC.ByteString -> BC.ByteString
-buildRequest host path token  method = host <> path <> token 
-                                        <> method
+    
+buildRequest :: Host -> Path -> Token -> TelRequestBody
+buildRequest host path token = host <> path <> token 
 
 getUpdate :: IO BC.ByteString
 getUpdate = do 
     token <- readToken
     let update = buildRequest botTelegramHost botTelegramPath 
-                 token "/GetUpdates" 
+                 token <> "/GetUpdates" 
     return update 
 
 -- for testing
-prepareMessage :: IO BC.ByteString -> IO BC.ByteString -> IO BC.ByteString
-prepareMessage chatID messageIO = do
+prepareMessage :: ChatID -> PrefixMessage -> ReseivedMessage -> 
+                  SendingMethod -> IO BC.ByteString
+prepareMessage chatID prefix message method = do
     token <- readToken
-    id <- chatID
-    message <- messageIO
     let reg = buildRequest botTelegramHost botTelegramPath  
-              token "/sendSticker" 
-    let request = reg <> "?chat_id=" <> id <> "&sticker=" <> message  
+              token
+    let request = reg <> method <> "?chat_id=" <> chatID 
+                  <> prefix <> message  
     return request
 
 readToken :: IO Token

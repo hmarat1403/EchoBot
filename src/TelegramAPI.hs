@@ -2,10 +2,14 @@
 module TelegramAPI where
 
 import qualified Data.Text as T
-import GHC.Generics hiding (from)
+import Data.Text.Encoding (encodeUtf8)
+import GHC.Generics (Generic) 
 import Data.Aeson
     ( Value(Object), FromJSON(parseJSON), (.:), (.:?) )
-import Control.Monad ( forM_ )
+--import Control.Monad ( forM_ )
+import qualified Data.ByteString.Char8 as BC
+import Data.Maybe (isJust, fromJust)
+
 
 -- telegram responce type
 data TelegramResponse = Response 
@@ -40,6 +44,23 @@ data Message = Message
                , contact :: Maybe Contact
                } deriving (Show, Generic)
 instance FromJSON Message 
+data Chat = Chat
+            { chat_id :: Int
+            , chat_Type :: T.Text
+            , chatTitle :: Maybe T.Text
+            , chat_FirstName :: Maybe T.Text
+            , chat_LastName :: Maybe T.Text
+            , chat_UserName :: Maybe T.Text
+            } deriving Show         
+instance FromJSON Chat where
+    parseJSON (Object v) = 
+           Chat <$> v .: "id"
+                <*> v .: "type"
+                <*> v .:? "title"
+                <*> v .:? "username"
+                <*> v .:? "first_name"
+                <*> v .:? "last_name"  
+
 data InlineQuery = InlineQuery
                    { idIQ :: T.Text
                    , fromIQ :: User
@@ -55,7 +76,7 @@ instance FromJSON InlineQuery where
 data MessageEntity = MessageEntity
                      { entityType :: T.Text
                      , offset :: Int
-                     , entiityLength :: Int
+                     , entityLength :: Int
                      , url :: Maybe T.Text
                      , userME :: Maybe User
                      , languageME :: Maybe T.Text
@@ -107,22 +128,7 @@ instance FromJSON Animation where
                     <*> v .:? "file_name"
                     <*> v .:? "mime_type"
                     <*> v .:? "file_size" 
-data Chat = Chat
-            { chat_id :: Int
-            , chat_Type :: T.Text
-            , chatTitle :: Maybe T.Text
-            , chat_FirstName :: Maybe T.Text
-            , chat_LastName :: Maybe T.Text
-            , chat_UserName :: Maybe T.Text
-            } deriving Show         
-instance FromJSON Chat where
-    parseJSON (Object v) = 
-           Chat <$> v .: "id"
-                <*> v .: "type"
-                <*> v .:? "title"
-                <*> v .:? "username"
-                <*> v .:? "first_name"
-                <*> v .:? "last_name"                               
+                             
 data Audio = Audio 
             { file_idAud :: T.Text
             , file_unique_idAud :: T.Text
@@ -193,12 +199,58 @@ instance FromJSON Contact where
                 <*> v .:? "last_name"
                 <*> v .:? "user_id"
                 <*> v .:? "vcard"
-                                                                                                                      
-printResults :: Maybe [Update] -> IO ()
-printResults Nothing = print "error loading data"
-printResults (Just results) = do
-    forM_ results (\s -> 
-       case message s of
-           Just mes -> print . sticker $ mes 
-           Nothing  -> print "Exception!") 
-    
+type ChatID = BC.ByteString
+type ReseivedMessage = BC.ByteString
+type SendingMethod = BC.ByteString
+type PrefixMessage = BC.ByteString
+
+getMessageChatID :: Maybe Message -> ChatID
+getMessageChatID maybeMessage = case maybeMessage of
+    Just message -> BC.pack . show . chat_id . chat $ message
+    Nothing      -> error "message don't reseived"
+
+getMessageContent :: Maybe Message -> ReseivedMessage   
+getMessageContent maybeMessage = case maybeMessage of 
+    Just message -> parseMessageContent message
+    Nothing      -> error "message don't reseived"  
+    where parseMessageContent input
+           | isJust $ text input  = encodeUtf8 . fromJust $ text input 
+           | isJust $ animation input  = encodeUtf8 . file_idAn . fromJust $ animation input
+           | isJust $ audio input  = encodeUtf8 . file_idAud . fromJust $ audio input    
+           | isJust $ photo input  = encodeUtf8 .file_id . head . fromJust $ photo input 
+           | isJust $ document input  = encodeUtf8 . file_idDoc . fromJust $ document input 
+           | isJust $ video input  = encodeUtf8 . file_idVid . fromJust $ video input             
+           | isJust $ voice input  = encodeUtf8 . file_idV . fromJust $ voice input         
+           | isJust $ sticker input  = encodeUtf8 . file_idSt . fromJust $ sticker input                                                                               
+           | isJust $ contact input  = encodeUtf8 $ (phone_number . fromJust $ contact input) 
+                                       <> (first_nameCon . fromJust $ contact input)
+           | otherwise = "Can't return your message yet!"
+                                   
+getSendingMethod :: Maybe Message -> SendingMethod
+getSendingMethod maybeMessage = case maybeMessage of 
+    Just message -> parseMessageContent message
+    Nothing      -> error "message don't reseived"  
+    where parseMessageContent input
+           | isJust $ animation input  = "/sendAnimation"
+           | isJust $ audio input  = "/sendAudio"    
+           | isJust $ photo input  = "/sendPhoto" 
+           | isJust $ document input  = "/sendDocument" 
+           | isJust $ video input  = "/sendVideo"             
+           | isJust $ voice input  = "/sendVoice"        
+           | isJust $ sticker input  = "/sendSticker"             
+           | isJust $ contact input  = "/sendContact" 
+           | otherwise = "/sendMessage"
+
+getPrefix :: Maybe Message -> PrefixMessage
+getPrefix maybeMessage = case maybeMessage of 
+    Just message -> parseMessageContent message
+    Nothing      -> error "message don't reseived"  
+    where parseMessageContent input
+           | isJust $ text input  = "&text="
+           | isJust $ sticker input = "&sticker="
+           | isJust $ photo input = "&photo="
+           | isJust $ voice input = "&voice="
+           | isJust $ contact input = "&contact="
+           | otherwise = "&file_id="
+
+  
