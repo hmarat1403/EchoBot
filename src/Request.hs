@@ -2,23 +2,62 @@
 module Request where
 
 import qualified Data.ByteString.Char8 as BC
-import qualified Data.Text as T 
-import TelegramAPI  (PrefixMessage, SendingMethod,  ChatID
-                    , ReseivedMessage
-                    , getMessageContent
-                    , getMessageChatID )
-import GHC.Generics
-import Data.Aeson
-import Data.Aeson.Utils
-import Data.Int (Int)
---import Network.HTTP.Simple
+import Parser ( PrefixMessage, SendingMethod, ChatID, ReseivedMessage )
+import Config (telegramAllowUpdates
+              , readToken
+              , telegramLimit
+              , telegramTimeout)
 
 type Host = BC.ByteString
 type Path = BC.ByteString
 type Token = BC.ByteString
 type TelRequestBody = BC.ByteString
+type TelOffset = Int
+type TelLimit = Int
+type TelTimeout = Int
+type TelAllowedUpdates = BC.ByteString
+type GetUpdatesParametrs = BC.ByteString 
 
-data TelegramRequest = TelegramRequest
+botTelegramHost :: Host
+botTelegramHost = "https://api.telegram.org" 
+botTelegramPath ::Path
+botTelegramPath = "/bot"  
+telegramToken :: IO Token
+telegramToken = readToken
+
+buildRequest :: Host -> Path -> Token -> TelRequestBody
+buildRequest host path token = host <> path <> token 
+
+getUpdatesParametrs :: TelLimit -> TelTimeout-> TelAllowedUpdates 
+                       -> TelOffset -> GetUpdatesParametrs
+getUpdatesParametrs telLimit telTimeout telAllowedUpdates telOffset = 
+    "?offset=" <> telOffsetBCString <> "&limit=" <> telLimitBCString 
+    <> "&timeout=" <> telTimeoutBCString <> "&allowed_updates=" <> telAllowedUpdates
+    where telOffsetBCString = BC.pack . show $ telOffset
+          telTimeoutBCString = BC.pack . show $ telTimeout
+          telLimitBCString = BC.pack . show $ telLimit
+
+getUpdate :: IO TelOffset -> IO BC.ByteString
+getUpdate lastUpdateID = do 
+    token <- telegramToken
+    updateID <- lastUpdateID
+    let body = buildRequest botTelegramHost botTelegramPath token 
+    let suffics = getUpdatesParametrs telegramLimit telegramTimeout 
+                    telegramAllowUpdates (updateID + 1)
+    let update = body <> "/getUpdates" <> suffics                        
+    return update 
+
+prepareMessage :: ChatID -> PrefixMessage -> ReseivedMessage -> 
+                  SendingMethod -> IO BC.ByteString
+prepareMessage chatID prefix message method = do
+    token <- telegramToken
+    let reg = buildRequest botTelegramHost botTelegramPath  
+              token
+    let request = reg <> method <> "?chat_id=" <> chatID 
+                  <> prefix <> message  
+    return request
+
+{- data TelegramRequest = TelegramRequest
                        { hostTel :: Host
                        , pathTel :: Path
                        , tokenTel :: Token
@@ -52,10 +91,10 @@ data KeyboardButton = KeyboardButton
        
 
 data GetUpdates = GetUpdates
-                 { offset :: Int
-                 , limit :: Int
-                 , timeout :: Int
-                 , allowed_updates :: [BC.ByteString]
+                 { offset :: TelOffset
+                 , limit :: TelLimit
+                 , timeout :: TelTimeout
+                 , allowed_updates :: [TelAllowedUpdates]
                  } deriving (Show, Generic)
          
 
@@ -104,45 +143,5 @@ data SendVoice = SendVoice
 data SendSticker = SendSticker
                    { stickerChat_id :: Int
                    , sticker :: BC.ByteString -- file_id
-                   } deriving Show
-                                                                                                                                                                                                       
-botTelegramHost :: Host
-botTelegramHost = "https://api.telegram.org" 
-botTelegramPath ::Path
-botTelegramPath = "/bot"  
-
-    
-buildRequest :: Host -> Path -> Token -> TelRequestBody
-buildRequest host path token = host <> path <> token 
-
-getUpdate :: IO BC.ByteString
-getUpdate = do 
-    token <- readToken
-    let update = buildRequest botTelegramHost botTelegramPath 
-                 token <> "/GetUpdates" 
-    return update 
-
--- for testing
-prepareMessage :: ChatID -> PrefixMessage -> ReseivedMessage -> 
-                  SendingMethod -> IO BC.ByteString
-prepareMessage chatID prefix message method = do
-    token <- readToken
-    let reg = buildRequest botTelegramHost botTelegramPath  
-              token
-    let request = reg <> method <> "?chat_id=" <> chatID 
-                  <> prefix <> message  
-    return request
-
-readToken :: IO Token
-readToken = do
-    string <- readFile "Data.txt" 
-    let token = BC.pack string 
-    return token   
-
-stickerForTest :: SendSticker
-stickerForTest = SendSticker { stickerChat_id = 614000958
-                      , sticker = "CAACAgIAAxkBAAM2X5w9OCBV-qkirJ1TQZzvKatBMB4AAskBAAJWnb0KddhwxIgZLo0bBA"
-                      }    
-
-
+                   } deriving Show -}
 

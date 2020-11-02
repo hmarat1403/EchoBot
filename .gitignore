@@ -4,3 +4,4 @@
 .history
 *.json
 *.txt
+# src.Config.hs

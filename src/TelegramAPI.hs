@@ -2,14 +2,9 @@
 module TelegramAPI where
 
 import qualified Data.Text as T
-import Data.Text.Encoding (encodeUtf8)
 import GHC.Generics (Generic) 
 import Data.Aeson
     ( Value(Object), FromJSON(parseJSON), (.:), (.:?) )
---import Control.Monad ( forM_ )
-import qualified Data.ByteString.Char8 as BC
-import Data.Maybe (isJust, fromJust)
-
 
 -- telegram responce type
 data TelegramResponse = Response 
@@ -39,6 +34,7 @@ data Message = Message
                , photo :: Maybe [PhotoSize]
                , sticker :: Maybe Sticker
                , video :: Maybe Video
+               , video_note :: Maybe VideoNote
                , voice :: Maybe Voice
                , caption :: Maybe T.Text
                , contact :: Maybe Contact
@@ -111,7 +107,7 @@ data Animation = Animation
                  , file_unique_idAn :: T.Text
                  , widthAn :: Int
                  , heightAn :: Int
-                 , duration :: Int
+                 , durationAn :: Int
                  , thumb :: Maybe PhotoSize
                  , file_nameAn :: Maybe T.Text
                  , mime_type :: Maybe T.Text
@@ -199,7 +195,23 @@ instance FromJSON Contact where
                 <*> v .:? "last_name"
                 <*> v .:? "user_id"
                 <*> v .:? "vcard"
-type ChatID = BC.ByteString
+data VideoNote = VideoNote
+                 { file_idVN :: T.Text
+                 , file_unique_idVN :: T.Text
+                 , lengthVN :: Maybe Int
+                 , durationVN :: Maybe Int
+                 , thumbVN :: Maybe PhotoSize
+                 , file_sizeVN :: Maybe Int
+                 } deriving Show
+instance FromJSON VideoNote where
+    parseJSON (Object v) = 
+        VideoNote <$> v .: "file_id"
+                  <*> v .: "file_unique_id"
+                  <*> v .: "length"
+                  <*> v .: "duration" 
+                  <*> v .: "thumb"
+                  <*> v .: "file_size"                                  
+{- type ChatID = BC.ByteString
 type ReseivedMessage = BC.ByteString
 type SendingMethod = BC.ByteString
 type PrefixMessage = BC.ByteString
@@ -223,7 +235,8 @@ getMessageContent maybeMessage = case maybeMessage of
            | isJust $ voice input  = encodeUtf8 . file_idV . fromJust $ voice input         
            | isJust $ sticker input  = encodeUtf8 . file_idSt . fromJust $ sticker input                                                                               
            | isJust $ contact input  = encodeUtf8 $ (phone_number . fromJust $ contact input) 
-                                       <> (first_nameCon . fromJust $ contact input)
+                                       <> "&first_name=" <> (first_nameCon . fromJust $ contact input)
+           | isJust $ video_note input = encodeUtf8 . file_idVN . fromJust $ video_note input
            | otherwise = "Can't return your message yet!"
                                    
 getSendingMethod :: Maybe Message -> SendingMethod
@@ -235,7 +248,8 @@ getSendingMethod maybeMessage = case maybeMessage of
            | isJust $ audio input  = "/sendAudio"    
            | isJust $ photo input  = "/sendPhoto" 
            | isJust $ document input  = "/sendDocument" 
-           | isJust $ video input  = "/sendVideo"             
+           | isJust $ video input  = "/sendVideo"   
+           | isJust $ video_note input = "/sendVideoNote"          
            | isJust $ voice input  = "/sendVoice"        
            | isJust $ sticker input  = "/sendSticker"             
            | isJust $ contact input  = "/sendContact" 
@@ -250,7 +264,10 @@ getPrefix maybeMessage = case maybeMessage of
            | isJust $ sticker input = "&sticker="
            | isJust $ photo input = "&photo="
            | isJust $ voice input = "&voice="
-           | isJust $ contact input = "&contact="
-           | otherwise = "&file_id="
-
-  
+           | isJust $ contact input = "&phone_number="
+           | isJust $ animation input = "&animation="
+           | isJust $ audio input = "&audio="
+           | isJust $ video  input = "&video="
+           | isJust $ video_note input = "&video_note="
+           | isJust $ document input = "&document="
+ -}
