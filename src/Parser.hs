@@ -12,28 +12,32 @@ module Parser
     ) where
 
 import qualified Data.ByteString.Char8 as BC 
-import TelegramAPI
-    (update_id, result,  Contact(phone_number, first_nameCon),
-      Sticker(file_idSt),
-      Voice(file_idV),
-      Video(file_idVid),
-      Document(file_idDoc),
-      Audio(file_idAud),
-      Animation(file_idAn),
-      PhotoSize(file_id),
-      Chat(chat_id),
-      Message(chat, text, sticker, photo, voice, contact, animation,
-              audio, video, video_note, document),
-      VideoNote(file_idVN))
+import TelegramAPI 
+    ( update_id
+    , result
+    , Contact (phone_number, first_nameCon)
+    , Sticker (file_idSt)
+    , Voice(file_idV)
+    , Video (file_idVid)
+    , Document (file_idDoc)
+    , Audio (file_idAud)
+    , Animation (file_idAn)
+    , PhotoSize (file_id)
+    , Chat (chat_id)
+    , Message (chat, text, sticker, photo, voice, contact, animation,
+              audio, video, video_note, document)
+    , VideoNote (file_idVN)
+    )
 import Data.Maybe (fromJust, isJust)
-import Data.Text.Encoding (encodeUtf8)
+--import qualified Data.Text.Encoding as DTE
+import Data.Text (unpack)
 import Network.HTTP.Simple (getResponseBody, Response)
 import qualified Data.ByteString.Lazy as L
 import Data.Aeson (eitherDecode)
 
 
 type ChatID = BC.ByteString
-type ReseivedMessage = BC.ByteString
+type ReseivedMessage = String
 type SendingMethod = BC.ByteString
 type PrefixMessage = BC.ByteString
 
@@ -48,26 +52,27 @@ getMessageContent maybeMessage = case maybeMessage of
     Nothing      -> error "message don't reseived"  
     where parseMessageContent input
            | isJust $ text input  = 
-               encodeUtf8 . fromJust $ text input 
+               unpack . fromJust $ text input 
            | isJust $ animation input  = 
-               encodeUtf8 . file_idAn . fromJust $ animation input
+               unpack . file_idAn . fromJust $ animation input
            | isJust $ audio input  = 
-               encodeUtf8 . file_idAud . fromJust $ audio input    
+               unpack . file_idAud . fromJust $ audio input    
            | isJust $ photo input  = 
-               encodeUtf8 .file_id . head . fromJust $ photo input 
+               unpack .file_id . head . fromJust $ photo input 
            | isJust $ document input  = 
-               encodeUtf8 . file_idDoc . fromJust $ document input 
+               unpack . file_idDoc . fromJust $ document input 
            | isJust $ video input  = 
-               encodeUtf8 . file_idVid . fromJust $ video input             
+               unpack . file_idVid . fromJust $ video input             
            | isJust $ voice input  = 
-               encodeUtf8 . file_idV . fromJust $ voice input         
+               unpack . file_idV . fromJust $ voice input         
            | isJust $ sticker input  = 
-               encodeUtf8 . file_idSt . fromJust $ sticker input                                                                               
+               unpack . file_idSt . fromJust $ sticker input                                                                               
            | isJust $ contact input  = 
-               encodeUtf8 $ (phone_number . fromJust $ contact input) 
+               unpack $ (phone_number . fromJust $ contact input) 
                <> "&first_name=" <> (first_nameCon . fromJust $ contact input)
            | isJust $ video_note input = 
-               encodeUtf8 . file_idVN . fromJust $ video_note input
+               unpack . file_idVN . fromJust $ video_note input
+     --      | isJust $ entities input = unpack . fromJust $ entities input 
            | otherwise = "Can't return your message yet!"
                                    
 getSendingMethod :: Maybe Message -> SendingMethod

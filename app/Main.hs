@@ -4,7 +4,7 @@ module Main where
 --import Parser (someFunc)
 import Data.Aeson ( eitherDecode )
 import TelegramAPI ( TelegramResponse (result)
-                   , Update (message, update_id))
+                   , Update (message))
 import Parser ( getMessageContent
               , getPrefix
               , getSendingMethod
@@ -17,7 +17,6 @@ import Network.HTTP.Simple (Response,  getResponseBody
                            , parseRequestThrow_ )
 import Network.HTTP.Types (Status(..))
 import qualified Data.ByteString.Char8 as BC 
-import Control.Monad.State.Lazy (put,  evalStateT )
 import Request (prepareMessage, getUpdate)
 import Data.IORef ( writeIORef, newIORef, readIORef )
 import Control.Monad (forever)
@@ -59,7 +58,8 @@ sendMessage reseivingBC = do
                 let cont = getMessageContent . message $ telRes
                 let met = getSendingMethod . message $ telRes
                 let pref = getPrefix . message $ telRes
-                request <- prepareMessage chat pref cont met 
-                httpLBS . parseRequestThrow_ . BC.unpack $ request 
+                request <- prepareMessage chat pref met 
+                httpLBS . parseRequestThrow_ $ ((BC.unpack request) 
+                            <> cont)
                 return ()
            

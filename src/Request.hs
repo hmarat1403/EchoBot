@@ -2,7 +2,7 @@
 module Request where
 
 import qualified Data.ByteString.Char8 as BC
-import Parser ( PrefixMessage, SendingMethod, ChatID, ReseivedMessage )
+import Parser ( PrefixMessage, SendingMethod, ChatID )
 import Config (telegramAllowUpdates
               , readToken
               , telegramLimit
@@ -47,14 +47,14 @@ getUpdate lastUpdateID = do
     let update = body <> "/getUpdates" <> suffics                        
     return update 
 
-prepareMessage :: ChatID -> PrefixMessage -> ReseivedMessage -> 
+prepareMessage :: ChatID -> PrefixMessage ->  
                   SendingMethod -> IO BC.ByteString
-prepareMessage chatID prefix message method = do
+prepareMessage chatID prefix method = do
     token <- telegramToken
     let reg = buildRequest botTelegramHost botTelegramPath  
               token
     let request = reg <> method <> "?chat_id=" <> chatID 
-                  <> prefix <> message  
+                  <> prefix  
     return request
 
 {- data TelegramRequest = TelegramRequest
