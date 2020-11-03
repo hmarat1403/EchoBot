@@ -53,7 +53,7 @@ sendMessage reseivingBC = do
             if null (result res) 
             then return ()
             else do
-                let telRes = last . result $ res
+                let telRes = head . result $ res
                 let chat = getMessageChatID . message $ telRes
                 let cont = getMessageContent . message $ telRes
                 let met = getSendingMethod . message $ telRes

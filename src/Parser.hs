@@ -117,6 +117,6 @@ getLastUpdateNumber reseivingBC = do
             if null (result res) 
             then return 0
             else do
-                let telRes = last . result $ res
-                let number = update_id telRes
+                let number = update_id . head . result $ res
+             --   let number = update_id telRes
                 return number           
