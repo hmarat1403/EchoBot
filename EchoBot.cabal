@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 7397581acc9da0c4055879595d77f14ad50fbeddd731989ae015a3e50a029cb1
+-- hash: bf86773573e7110bab6f86845482b820d6b17ebc99b29214e10326ea6c35f34f
 
 name:           EchoBot
 version:        0.1.0.0
@@ -40,6 +40,7 @@ library
     , aeson-utils
     , base >=4.7 && <5
     , bytestring
+    , containers
     , http-conduit
     , http-types
     , lens
@@ -60,6 +61,7 @@ executable EchoBot-exe
     , aeson-utils
     , base >=4.7 && <5
     , bytestring
+    , containers
     , http-conduit
     , http-types
     , lens
@@ -81,6 +83,7 @@ test-suite EchoBot-test
     , aeson-utils
     , base >=4.7 && <5
     , bytestring
+    , containers
     , http-conduit
     , http-types
     , lens

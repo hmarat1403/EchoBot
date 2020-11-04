@@ -29,7 +29,7 @@ dependencies:
 - http-conduit
 - http-types
 - mtl
-
+- containers
 library:
   source-dirs: src
 

@@ -5,16 +5,20 @@ module Parser
     , getSendingMethod
     , getMessageChatID
     , getLastUpdateNumber
+    , getDecodeUpdate
+    , getUserID
     , PrefixMessage
     , SendingMethod
     , ChatID
     , ReseivedMessage
+    , checkUser
     ) where
 
+import Prelude hiding (id)
 import qualified Data.ByteString.Char8 as BC 
 import TelegramAPI 
-    ( update_id
-    , result
+    ( Update (message, update_id)
+    , TelegramResponse (result)
     , Contact (phone_number, first_nameCon)
     , Sticker (file_idSt)
     , Voice(file_idV)
@@ -24,9 +28,10 @@ import TelegramAPI
     , Animation (file_idAn)
     , PhotoSize (file_id)
     , Chat (chat_id)
-    , Message (chat, text, sticker, photo, voice, contact, animation,
+    , Message (chat, text, sticker, photo, from, voice, contact, animation,
               audio, video, video_note, document)
     , VideoNote (file_idVN)
+    , User (id)
     )
 import Data.Maybe (fromJust, isJust)
 --import qualified Data.Text.Encoding as DTE
@@ -34,6 +39,7 @@ import Data.Text (unpack)
 import Network.HTTP.Simple (getResponseBody, Response)
 import qualified Data.ByteString.Lazy as L
 import Data.Aeson (eitherDecode)
+import qualified Data.Map as Map 
 
 
 type ChatID = BC.ByteString
@@ -107,16 +113,32 @@ getPrefix maybeMessage = case maybeMessage of
            | isJust $ document input = "&document="
            | otherwise  = "&text="
 
-getLastUpdateNumber :: Response L.ByteString -> IO Int
-getLastUpdateNumber reseivingBC = do
+getDecodeUpdate :: Response L.ByteString -> IO TelegramResponse
+getDecodeUpdate reseivingBC = do
     let jsonBody = getResponseBody reseivingBC
     let telegramResponse = eitherDecode jsonBody
     case telegramResponse of 
-        Left nores -> return . error $ "cannot parse: " <> nores
-        Right res -> do 
-            if null (result res) 
-            then return 0
-            else do
-                let number = update_id . head . result $ res
-             --   let number = update_id telRes
-                return number           
+        Left noDec -> return . error $ "can't decode Update: " <> noDec
+        Right res  -> return res 
+
+getLastUpdateNumber :: TelegramResponse -> Int
+getLastUpdateNumber decodeUpdate =  
+            if null (result decodeUpdate) 
+            then 0
+            else update_id . head . result $ decodeUpdate 
+             
+getUserID :: TelegramResponse -> Maybe Int
+getUserID decodeUpdate =  
+            if null (result decodeUpdate) 
+            then Nothing
+            else (<$>) id ((message . head . result $ decodeUpdate) >>= from)   
+
+checkUser :: Maybe Int -> Map.Map Int Int -> Map.Map Int Int
+checkUser maybeUserID userMap = case maybeUserID of
+    Nothing     -> userMap
+    Just userID -> addUserToMap userID userMap
+
+addUserToMap :: Int -> Map.Map Int Int -> Map.Map Int Int
+addUserToMap userID userMap = case Map.lookup userID userMap of
+    Nothing -> Map.insert userID 2 userMap 
+    Just _  -> userMap     

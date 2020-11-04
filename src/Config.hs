@@ -4,9 +4,11 @@ module Config
        , telegramLimit
        , telegramTimeout
        , telegramAllowUpdates
+       , telegramUsers
        )  where
 
 import qualified Data.ByteString.Char8 as BC 
+import qualified Data.Map as Map
 
 readToken :: IO BC.ByteString
 readToken = do
@@ -15,7 +17,7 @@ readToken = do
     return token 
 
 telegramOffset :: Int
-telegramOffset = 0    
+telegramOffset = 793579119   
 
 telegramLimit :: Int
 telegramLimit = 10
@@ -25,3 +27,6 @@ telegramTimeout = 25
 
 telegramAllowUpdates :: BC.ByteString
 telegramAllowUpdates = BC.empty
+
+telegramUsers :: IO (Map.Map Int Int)
+telegramUsers = return $ Map.empty
