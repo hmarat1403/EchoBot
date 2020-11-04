@@ -1,12 +1,26 @@
 {-# LANGUAGE OverloadedStrings, DeriveGeneric #-}
-module Request where
+module Request ( buildRequest
+               , getUpdatesParametrs
+               , getUpdate
+               , sendMessage
+               , prepareMessage
+               ) where
 
 import qualified Data.ByteString.Char8 as BC
-import Parser ( PrefixMessage, SendingMethod, ChatID )
-import Config (telegramAllowUpdates
+import Parser ( getPrefix
+              , getSendingMethod
+              , getMessageContent
+              , getMessageChatID
+              , PrefixMessage
+              , SendingMethod
+              , ChatID )
+import Config ( telegramAllowUpdates
               , readToken
               , telegramLimit
               , telegramTimeout)
+import Network.HTTP.Simple (httpLBS, parseRequestThrow_)
+import TelegramAPI (message, TelegramResponse (result))
+
 
 type Host = BC.ByteString
 type Path = BC.ByteString
@@ -56,6 +70,20 @@ prepareMessage chatID prefix method = do
     let request = reg <> method <> "?chat_id=" <> chatID 
                   <> prefix  
     return request
+
+sendMessage :: TelegramResponse -> IO ()
+sendMessage decodeUpdate = do
+    if null (result decodeUpdate) 
+    then return ()
+    else do
+        let telRes = head . result $ decodeUpdate
+        let chat = getMessageChatID . message $ telRes
+        let cont = getMessageContent . message $ telRes
+        let met = getSendingMethod . message $ telRes
+        let pref = getPrefix . message $ telRes
+        request <- prepareMessage chat pref met 
+        httpLBS . parseRequestThrow_ $ ((BC.unpack request) <> cont)
+        return ()    
 
 {- data TelegramRequest = TelegramRequest
                        { hostTel :: Host
