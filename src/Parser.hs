@@ -6,12 +6,10 @@ module Parser
     , getMessageChatID
     , getLastUpdateNumber
     , getDecodeUpdate
-    , getUserID
     , PrefixMessage
     , SendingMethod
     , ChatID
     , ReseivedMessage
-    , checkUser
     ) where
 
 import Prelude hiding (id)
@@ -127,18 +125,3 @@ getLastUpdateNumber decodeUpdate =
             then 0
             else update_id . head . result $ decodeUpdate 
              
-getUserID :: TelegramResponse -> Maybe Int
-getUserID decodeUpdate =  
-            if null (result decodeUpdate) 
-            then Nothing
-            else (<$>) id ((message . head . result $ decodeUpdate) >>= from)   
-
-checkUser :: Maybe Int -> Map.Map Int Int -> Map.Map Int Int
-checkUser maybeUserID userMap = case maybeUserID of
-    Nothing     -> userMap
-    Just userID -> addUserToMap userID userMap
-
-addUserToMap :: Int -> Map.Map Int Int -> Map.Map Int Int
-addUserToMap userID userMap = case Map.lookup userID userMap of
-    Nothing -> Map.insert userID 2 userMap 
-    Just _  -> userMap     

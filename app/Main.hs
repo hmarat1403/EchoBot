@@ -1,11 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 
---import Parser (someFunc)
+import Users (addUserToMap,  checkUser, getUserID, writeMapToFile )
 import Data.Aeson ( eitherDecode )
 import TelegramAPI ( TelegramResponse (result)
                    , Update (message))
-import Parser ( getLastUpdateNumber, getDecodeUpdate, getUserID, checkUser )
+import Parser ( getLastUpdateNumber, getDecodeUpdate )
 import qualified Data.ByteString.Lazy as L
 import Network.HTTP.Simple ( getResponseStatus
                            , httpLBS
@@ -14,14 +14,15 @@ import Network.HTTP.Types (Status(..))
 import qualified Data.ByteString.Char8 as BC 
 import Request (prepareMessage, getUpdate, sendMessage)
 import Data.IORef ( writeIORef, newIORef, readIORef )
-import Control.Monad (forever)
+import Control.Monad (forever, unless, when )
 import Config (telegramOffset, telegramUsers)
+import Data.Maybe (fromJust)
 
 
 main :: IO ()
 main = do
-
     startNumber <- newIORef telegramOffset  
+    usersList <- newIORef telegramUsers
     forever $ do
         updRequest <- getUpdate . readIORef $ startNumber
         update <- httpLBS . parseRequestThrow_ . BC.unpack $ updRequest
@@ -35,6 +36,15 @@ main = do
             if num <= a
             then return ()
             else do 
+                let maybeID = getUserID decodedUpdate
+                listOfUsersIO <- readIORef usersList
+                listOfUsers <- listOfUsersIO
+             --   print listOfUsers
+                unless (checkUser maybeID listOfUsers) (do
+                    let newMap = addUserToMap (fromJust maybeID) listOfUsers
+                    writeIORef usersList . return $ newMap
+                    writeMapToFile "Users.txt" $ newMap
+                    print newMap)
                 writeIORef startNumber num
                 sendMessage decodedUpdate                                            
         else print $ "request failed: code-" <> show code 
