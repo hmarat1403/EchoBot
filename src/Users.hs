@@ -19,6 +19,9 @@ checkUser maybeUserID userMap = let maybeValue = maybeUserID >>= (`Map.lookup` u
                                         Nothing -> False
                                         Just _  -> True
 
+getUsersValue :: Maybe Int -> Map.Map Int Int -> Maybe Int
+getUsersValue maybeUserID userMap = maybeUserID >>= (`Map.lookup` userMap) 
+                                                                    
 addUserToMap :: Int -> Map.Map Int Int -> Map.Map Int Int
 addUserToMap userID userMap = if checkUser (return userID) userMap
                               then userMap

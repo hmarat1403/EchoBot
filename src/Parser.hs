@@ -15,7 +15,7 @@ module Parser
 import Prelude hiding (id)
 import qualified Data.ByteString.Char8 as BC 
 import TelegramAPI 
-    ( Update (message, update_id)
+    ( Update ( update_id)
     , TelegramResponse (result)
     , Contact (phone_number, first_nameCon)
     , Sticker (file_idSt)
@@ -26,10 +26,10 @@ import TelegramAPI
     , Animation (file_idAn)
     , PhotoSize (file_id)
     , Chat (chat_id)
-    , Message (chat, text, sticker, photo, from, voice, contact, animation,
+    , Message (chat, text, sticker, photo, voice, contact, animation,
               audio, video, video_note, document)
     , VideoNote (file_idVN)
-    , User (id)
+    
     )
 import Data.Maybe (fromJust, isJust)
 --import qualified Data.Text.Encoding as DTE
@@ -37,7 +37,6 @@ import Data.Text (unpack)
 import Network.HTTP.Simple (getResponseBody, Response)
 import qualified Data.ByteString.Lazy as L
 import Data.Aeson (eitherDecode)
-import qualified Data.Map as Map 
 
 
 type ChatID = BC.ByteString
@@ -111,13 +110,12 @@ getPrefix maybeMessage = case maybeMessage of
            | isJust $ document input = "&document="
            | otherwise  = "&text="
 
-getDecodeUpdate :: Response L.ByteString -> IO TelegramResponse
-getDecodeUpdate reseivingBC = do
-    let jsonBody = getResponseBody reseivingBC
-    let telegramResponse = eitherDecode jsonBody
-    case telegramResponse of 
-        Left noDec -> return . error $ "can't decode Update: " <> noDec
-        Right res  -> return res 
+getDecodeUpdate :: Response L.ByteString -> TelegramResponse
+getDecodeUpdate reseivingBC = let jsonBody = getResponseBody reseivingBC
+                                  telegramResponse = eitherDecode jsonBody
+                              in case telegramResponse of 
+                                    Left noDec -> error $ "can't decode Update: " <> noDec
+                                    Right res  -> res 
 
 getLastUpdateNumber :: TelegramResponse -> Int
 getLastUpdateNumber decodeUpdate =  
