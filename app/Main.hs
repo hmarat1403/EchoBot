@@ -10,7 +10,7 @@ import Network.HTTP.Types (Status(..))
 import qualified Data.ByteString.Char8 as BC 
 import Request (getUpdate, sendMessage)
 import Data.IORef ( writeIORef, newIORef, readIORef )
-import Control.Monad (forever, unless )
+import Control.Monad (forever, unless, forM_ )
 import Config (telegramOffset, telegramUsers)
 import Data.Maybe (fromJust)
 
@@ -37,8 +37,8 @@ main = do
                 listOfUsers <- listOfUsersIO
                 if (checkUser maybeID listOfUsers) 
                 then (do
-                    let repeating = fromJust . getUsersValue $ maybeID listOfUsers
-                    sendMessage decodedUpdate)
+                     let repeating = fromJust $ getUsersValue maybeID listOfUsers
+                     forM_ [1..repeating] $ \_ -> sendMessage decodedUpdate)
                 else (do
                     let newMap = addUserToMap (fromJust maybeID) listOfUsers
                     writeIORef usersList . return $ newMap
