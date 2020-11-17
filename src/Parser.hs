@@ -11,7 +11,7 @@ module Parser
     , ChatID
     , ReseivedMessage
     ) where
-
+import Config ( defaultHelpMessage, defaultRepeateMessage ) 
 import Prelude hiding (id)
 import qualified Data.ByteString.Char8 as BC 
 import TelegramAPI 
@@ -29,11 +29,10 @@ import TelegramAPI
     , Message (chat, text, sticker, photo, voice, contact, animation,
               audio, video, video_note, document)
     , VideoNote (file_idVN)
-    
     )
 import Data.Maybe (fromJust, isJust)
 --import qualified Data.Text.Encoding as DTE
-import Data.Text (unpack)
+import Data.Text (Text, unpack)
 import Network.HTTP.Simple (getResponseBody, Response)
 import qualified Data.ByteString.Lazy as L
 import Data.Aeson (eitherDecode)
@@ -54,8 +53,6 @@ getMessageContent maybeMessage = case maybeMessage of
     Just message -> parseMessageContent message
     Nothing      -> error "message don't reseived"  
     where parseMessageContent input
-           | isJust $ text input  = 
-               unpack . fromJust $ text input 
            | isJust $ animation input  = 
                unpack . file_idAn . fromJust $ animation input
            | isJust $ audio input  = 
@@ -75,9 +72,15 @@ getMessageContent maybeMessage = case maybeMessage of
                <> "&first_name=" <> (first_nameCon . fromJust $ contact input)
            | isJust $ video_note input = 
                unpack . file_idVN . fromJust $ video_note input
-     --      | isJust $ entities input = unpack . fromJust $ entities input 
+           | isJust $ text input  = checkCommandMessage $ text input 
            | otherwise = "Can't return your message yet!"
-                                   
+
+checkCommandMessage :: Maybe Text -> ReseivedMessage
+checkCommandMessage maybeMessage 
+    | fromJust maybeMessage == "/help"      = BC.unpack defaultHelpMessage
+    | fromJust maybeMessage == "/repeate"   = BC.unpack defaultRepeateMessage
+    | otherwise                             = unpack . fromJust $ maybeMessage     
+
 getSendingMethod :: Maybe Message -> SendingMethod
 getSendingMethod maybeMessage = case maybeMessage of 
     Just message -> parseMessageContent message

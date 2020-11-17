@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, DeriveGeneric #-}
+{-# LANGUAGE OverloadedStrings #-}
 module Request ( buildRequest
                , getUpdatesParametrs
                , getUpdate
@@ -82,7 +82,8 @@ sendMessage decodeUpdate = do
         let met = getSendingMethod . message $ telRes
         let pref = getPrefix . message $ telRes
         request <- prepareMessage chat pref met 
-        httpLBS . parseRequestThrow_ $ ((BC.unpack request) <> cont)
+     --   print $ BC.unpack request <> cont
+        httpLBS . parseRequestThrow_ $ (BC.unpack request <> cont)
         return ()    
 
 {- data TelegramRequest = TelegramRequest

@@ -25,7 +25,7 @@ getUsersValue maybeUserID userMap = maybeUserID >>= (`Map.lookup` userMap)
 addUserToMap :: Int -> Map.Map Int Int -> Map.Map Int Int
 addUserToMap userID userMap = if checkUser (return userID) userMap
                               then userMap
-                              else Map.insert userID 2 userMap 
+                              else Map.insert userID 1 userMap 
 
 intToBS :: Int -> BC.ByteString
 intToBS = BC.pack . show
@@ -41,13 +41,13 @@ writeMapToFile filePath map = BC.writeFile filePath usersBS where
 readMapFromFile :: FilePath -> IO (Map.Map Int Int)
 readMapFromFile filePath = do 
     fileUsers <- BC.readFile filePath
-    let content = map BC.words $ BC.lines $ fileUsers
+    let content = map BC.words $ BC.lines fileUsers
     let list = listToPairs content
     return $ Map.fromList list
 
 
 listToPairs :: (Read a, Read b) => [[BC.ByteString]] -> [(a, b)]
-listToPairs ass = map (\xs -> (read . BC.unpack . head $ xs, read . BC.unpack . last $ xs)) ass 
+listToPairs = map (\xs -> (read . BC.unpack . head $ xs, read . BC.unpack . last $ xs)) 
 
 f :: Map.Map Int Int
 f = Map.fromList [(12,3),(424,6),(2,1)]
