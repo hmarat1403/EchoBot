@@ -18,7 +18,7 @@ import Config ( telegramAllowUpdates
               , readToken
               , telegramLimit
               , telegramTimeout)
-import Network.HTTP.Simple (httpLBS, parseRequestThrow_)
+import Network.HTTP.Simple (httpLBS, parseRequest_)
 import TelegramAPI (message, TelegramResponse (result))
 
 
@@ -83,7 +83,7 @@ sendMessage decodeUpdate = do
         let pref = getPrefix . message $ telRes
         request <- prepareMessage chat pref met 
      --   print $ BC.unpack request <> cont
-        httpLBS . parseRequestThrow_ $ (BC.unpack request <> cont)
+        httpLBS . parseRequest_ $ (BC.unpack request <> cont)
         return ()    
 
 {- data TelegramRequest = TelegramRequest

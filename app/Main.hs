@@ -5,7 +5,7 @@ import Users (addUserToMap,  checkUser, getUserID, writeMapToFile, getUsersValue
 import Parser ( getLastUpdateNumber, getDecodeUpdate )
 import Network.HTTP.Simple ( getResponseStatus
                            , httpLBS
-                           , parseRequestThrow_ )
+                           , parseRequest_ )
 import Network.HTTP.Types (Status(..))
 import qualified Data.ByteString.Char8 as BC 
 import Request (getUpdate, sendMessage)
@@ -21,12 +21,13 @@ main = do
     usersList <- newIORef telegramUsers
     forever $ do
         updRequest <- getUpdate . readIORef $ startNumber
-        update <- httpLBS . parseRequestThrow_ . BC.unpack $ updRequest
+        update <- httpLBS . parseRequest_ . BC.unpack $ updRequest
         let code = statusCode . getResponseStatus $ update
         let error = statusMessage . getResponseStatus $ update
         if code == 200
         then do 
             let decodedUpdate = getDecodeUpdate update
+         --   print decodedUpdate
             let num = getLastUpdateNumber decodedUpdate
             a <- readIORef startNumber
             if num <= a

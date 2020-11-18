@@ -55,9 +55,9 @@ helpMessage = do
 
 defaultHelpMessage :: BC.ByteString
 defaultHelpMessage = "I am echo-bot. I can send back the received messages\n\
-                  \I accept commands /help and /repeate \n\
+                  \I accept commands /help and /repeat \n\
                   \/help displays information about me\n\
-                  \/repeate displays information about the number of\n\
+                  \/repeat displays information about the number of\n\
                   \repeating messages and give you the opportunity\n\
                   \to change this number in the range from up to 5" 
 defaultRepeateMessage :: BC.ByteString
