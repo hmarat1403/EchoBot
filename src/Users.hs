@@ -2,7 +2,7 @@
 module Users where
 
 import Prelude hiding (id)
-import TelegramAPI (id, from, message, result, TelegramResponse)
+import TelegramAPI (User (id), from, message, result, TelegramResponse)
 import qualified Data.Map as Map
 import qualified Data.ByteString.Char8 as BC
 

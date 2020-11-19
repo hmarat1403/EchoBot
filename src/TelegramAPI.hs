@@ -1,26 +1,27 @@
-{-# LANGUAGE OverloadedStrings, DeriveGeneric #-}
+{-# LANGUAGE DeriveGeneric, DuplicateRecordFields #-}
 module TelegramAPI where
 
 import qualified Data.Text as T
+import Prelude hiding ( id )
 import GHC.Generics (Generic) 
 import Data.Aeson
-    ( Value(Object), FromJSON(parseJSON), (.:), (.:?) )
+    (genericParseJSON, genericToJSON, FromJSON (parseJSON), ToJSON (toJSON), defaultOptions, Options (..) )
 
 -- telegram responce type
-data TelegramResponse = Response 
+data TelegramResponse = TelegramResponse 
                         { ok :: Bool
                         , result :: [Update]
                         } deriving (Show, Generic)
 instance FromJSON TelegramResponse             
-
+instance ToJSON TelegramResponse
 -- last 24 hours updates list type
 data Update = Update
               { update_id :: Int
-              , message :: Maybe Message 
-              , inline_query :: Maybe InlineQuery
+              , message :: Maybe Message
               , channel_post :: Maybe Message
               } deriving (Show, Generic)
 instance FromJSON Update
+instance ToJSON Update
 data Message = Message
                { message_id :: Int
                , from :: Maybe User
@@ -37,54 +38,37 @@ data Message = Message
                , video_note :: Maybe VideoNote
                , voice :: Maybe Voice
                , caption :: Maybe T.Text
+               , caption_entities :: Maybe [MessageEntity]
                , contact :: Maybe Contact
                } deriving (Show, Generic)
 instance FromJSON Message 
+instance ToJSON Message
 data Chat = Chat
-            { chat_id :: Int
-            , chat_Type :: T.Text
-            , chatTitle :: Maybe T.Text
-            , chat_FirstName :: Maybe T.Text
-            , chat_LastName :: Maybe T.Text
-            , chat_UserName :: Maybe T.Text
-            } deriving Show         
+            { _id :: Int
+            , _type :: Maybe T.Text
+            , _title :: Maybe T.Text
+            , _firstName :: Maybe T.Text
+            , _lastName :: Maybe T.Text
+            , _userName :: Maybe T.Text
+            } deriving (Show, Generic)         
 instance FromJSON Chat where
-    parseJSON (Object v) = 
-           Chat <$> v .: "id"
-                <*> v .: "type"
-                <*> v .:? "title"
-                <*> v .:? "username"
-                <*> v .:? "first_name"
-                <*> v .:? "last_name"  
-
-data InlineQuery = InlineQuery
-                   { idIQ :: T.Text
-                   , fromIQ :: User
-                   , queryIQ :: T.Text
-                   , offsetIQ :: T.Text
-                   } deriving Show
-instance FromJSON InlineQuery where
-    parseJSON (Object v) = 
-        InlineQuery <$> v .: "id"
-                    <*> v .: "from"
-                    <*> v .: "query"
-                    <*> v .: "offset"                                              
+    parseJSON = genericParseJSON defaultOptions {fieldLabelModifier = drop 1}
+instance ToJSON Chat where
+    toJSON = genericToJSON defaultOptions {fieldLabelModifier = drop 1}     
+                                     
 data MessageEntity = MessageEntity
-                     { entityType :: T.Text
-                     , offset :: Int
-                     , entityLength :: Int
-                     , url :: Maybe T.Text
-                     , userME :: Maybe User
-                     , languageME :: Maybe T.Text
-                     } deriving Show
-instance FromJSON MessageEntity  where
-    parseJSON (Object v) = 
-        MessageEntity   <$> v .: "type"
-                        <*> v .: "offset"
-                        <*> v .: "length"
-                        <*> v .:? "url"
-                        <*> v .:? "user"
-                        <*> v .:? "language"                      
+                     { _type :: T.Text
+                     , _offset :: Int
+                     , _length :: Int
+                     , _url :: Maybe T.Text
+                     , _user :: Maybe User
+                     , _language :: Maybe T.Text
+                     } deriving (Show, Generic)
+instance FromJSON MessageEntity where
+    parseJSON = genericParseJSON defaultOptions {fieldLabelModifier = drop 1}
+instance ToJSON MessageEntity where
+    toJSON = genericToJSON defaultOptions {fieldLabelModifier = drop 1} 
+                  
 data PhotoSize = PhotoSize 
             { file_id :: T.Text
             , file_unique_id :: T.Text
@@ -92,7 +76,8 @@ data PhotoSize = PhotoSize
             , width :: Int
             , height :: Int
             } deriving (Show, Generic)
-instance FromJSON PhotoSize         
+instance FromJSON PhotoSize     
+instance ToJSON PhotoSize    
 data User = User 
             { id :: Int
             , is_bot :: Bool
@@ -102,113 +87,82 @@ data User = User
             , language_code :: Maybe T.Text
             } deriving (Show, Generic)
 instance FromJSON User             
+instance ToJSON User 
 data Animation = Animation
-                 { file_idAn :: T.Text
-                 , file_unique_idAn :: T.Text
-                 , widthAn :: Int
-                 , heightAn :: Int
-                 , durationAn :: Int
+                 { file_id :: T.Text
+                 , file_unique_id :: T.Text
+                 , width :: Int
+                 , height :: Int
+                 , duration :: Int
                  , thumb :: Maybe PhotoSize
-                 , file_nameAn :: Maybe T.Text
+                 , file_name :: Maybe T.Text
                  , mime_type :: Maybe T.Text
-                 , file_sizeAn :: Maybe Int
-                 } deriving Show
-instance FromJSON Animation where
-    parseJSON (Object v) = 
-        Animation   <$> v .: "file_id"
-                    <*> v .: "file_unique_id"
-                    <*> v .: "width"
-                    <*> v .: "height"
-                    <*> v .: "duration"
-                    <*> v .:? "thumb"
-                    <*> v .:? "file_name"
-                    <*> v .:? "mime_type"
-                    <*> v .:? "file_size" 
-                             
+                 , file_size :: Maybe Int
+                 } deriving (Show, Generic)
+instance FromJSON Animation 
+instance ToJSON Animation
+                       
 data Audio = Audio 
-            { file_idAud :: T.Text
-            , file_unique_idAud :: T.Text
-            , durationAud :: Int
-            } deriving Show
-instance FromJSON Audio where
-    parseJSON (Object v) = 
-        Audio   <$> v .: "file_id"
-                <*> v .: "file_unique_id"
-                <*> v .: "duration"
+            { file_id :: T.Text
+            , file_unique_id :: T.Text
+            , duration :: Int
+            } deriving (Show, Generic)
+instance FromJSON Audio 
+instance ToJSON Audio
+
 data Document = Document
-                { file_idDoc :: T.Text
-                , file_unique_idDoc :: T.Text
-                } deriving Show
-instance FromJSON Document where
-    parseJSON (Object v) = 
-        Document <$> v .: "file_id"
-                 <*> v .: "file_unique_id"
+                { file_id :: T.Text
+                , file_unique_id :: T.Text
+                } deriving (Show, Generic)
+instance FromJSON Document 
+instance ToJSON Document
+
 data Video = Video
-             { file_idVid :: T.Text
-             , file_unique_idVid :: T.Text
-             , widthVid :: Int
-             , heightVid :: Int
-             , durationVid :: Int
-             } deriving Show
-instance FromJSON Video where
-    parseJSON (Object v) = 
-        Video   <$> v .: "file_id"
-                <*> v .: "file_unique_id"
-                <*> v .: "width"
-                <*> v .: "height"
-                <*> v .: "duration" 
+             { file_id :: T.Text
+             , file_unique_id :: T.Text
+             , width :: Int
+             , height :: Int
+             , duration :: Int
+             } deriving (Show, Generic)
+instance FromJSON Video 
+instance ToJSON Video
+
 data Voice = Voice
-             { file_idV :: T.Text
-             , file_unique_idV :: T.Text
-             , durationV :: Int
-             } deriving Show
-instance FromJSON Voice where
-    parseJSON (Object v) = 
-        Voice   <$> v .: "file_id"
-                <*> v .: "file_unique_id"
-                <*> v .: "duration"
+             { file_id :: T.Text
+             , file_unique_id :: T.Text
+             , durationV:: Int
+             } deriving (Show, Generic)
+instance FromJSON Voice
+instance ToJSON Voice
+
 data Sticker = Sticker
-               { file_idSt :: T.Text
-               , file_unique_idSt :: T.Text
-               , widthSt :: Int
-               , heightSt :: Int
+               { file_id :: T.Text
+               , file_unique_id :: T.Text
+               , width :: Int
+               , height :: Int
                , is_animated :: Bool
-               } deriving Show
-instance FromJSON Sticker where
-    parseJSON (Object v) = 
-        Sticker <$> v .: "file_id"
-                <*> v .: "file_unique_id"
-                <*> v .: "width"
-                <*> v .: "height"
-                <*> v .: "is_animated"
+               } deriving (Show, Generic)
+instance FromJSON Sticker
+instance ToJSON Sticker
+
 data Contact = Contact
                { phone_number :: T.Text
-               , first_nameCon :: T.Text
-               , last_nameCon :: Maybe T.Text
-               , user_idCon :: Maybe Int
+               , first_name :: T.Text
+               , last_name :: Maybe T.Text
+               , user_id :: Maybe Int
                , vcard :: Maybe T.Text
-               } deriving Show
-instance FromJSON Contact where
-    parseJSON (Object v) =
-        Contact <$> v .: "phone_number" 
-                <*> v .: "first_name"
-                <*> v .:? "last_name"
-                <*> v .:? "user_id"
-                <*> v .:? "vcard"
+               } deriving (Show, Generic)
+instance FromJSON Contact
+instance ToJSON Contact
+
 data VideoNote = VideoNote
-                 { file_idVN :: T.Text
-                 , file_unique_idVN :: T.Text
-                 , lengthVN :: Maybe Int
-                 , durationVN :: Maybe Int
-                 , thumbVN :: Maybe PhotoSize
-                 , file_sizeVN :: Maybe Int
-                 } deriving Show
-instance FromJSON VideoNote where
-    parseJSON (Object v) = 
-        VideoNote <$> v .: "file_id"
-                  <*> v .: "file_unique_id"
-                  <*> v .: "length"
-                  <*> v .: "duration" 
-                  <*> v .: "thumb"
-                  <*> v .: "file_size"                                  
+                 { file_id :: T.Text
+                 , file_unique_id :: T.Text
+                 , length :: Maybe Int
+                 , duration :: Maybe Int
+                 , thumb :: Maybe PhotoSize
+                 , file_size :: Maybe Int
+                 } deriving (Show, Generic)
+instance FromJSON VideoNote
+instance ToJSON VideoNote
 

@@ -1,3 +1,4 @@
+{-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE OverloadedStrings #-}
 module Parser
     ( getMessageContent
@@ -15,24 +16,24 @@ import Config ( defaultHelpMessage, defaultRepeateMessage )
 import Prelude hiding (id )
 import qualified Data.ByteString.Char8 as BC 
 import TelegramAPI 
-    ( Update ( update_id)
+    ( Animation ( file_id )
+    , Update (..)
     , TelegramResponse (result)
-    , Contact (phone_number, first_nameCon)
-    , Sticker (file_idSt)
-    , Voice(file_idV)
-    , Video (file_idVid)
-    , Document (file_idDoc)
-    , Audio (file_idAud)
-    , Animation (file_idAn)
-    , PhotoSize (file_id)
-    , Chat (chat_id)
+    , Contact (phone_number, first_name)
+    , Sticker (file_id)
+    , Voice(file_id)
+    , Video ( file_id )
+    , Document ( file_id )
+    , Audio ( file_id )
+    , PhotoSize ( file_id )
+    , Chat (_id)
     , Message (chat, text, sticker, photo, voice, contact, animation,
               audio, video, video_note, document)
-    , VideoNote (file_idVN)
+    , VideoNote (..)
     )
 import Data.Maybe (fromJust, isJust)
 --import qualified Data.Text.Encoding as DTE
-import qualified Data.Text as T (Text, unpack, head, tail, cons)
+import qualified Data.Text as T (Text, unpack, head, tail)
 import Network.HTTP.Simple (getResponseBody, Response)
 import qualified Data.ByteString.Lazy as L
 import Data.Aeson (eitherDecode)
@@ -45,7 +46,7 @@ type PrefixMessage = BC.ByteString
 
 getMessageChatID :: Maybe Message -> ChatID
 getMessageChatID maybeMessage = case maybeMessage of
-    Just message -> BC.pack . show . chat_id . chat $ message
+    Just message -> BC.pack . show . _id . chat $ message
     Nothing      -> error "message don't reseived"
 
 getMessageContent :: Maybe Message -> ReseivedMessage   
@@ -54,24 +55,24 @@ getMessageContent maybeMessage = case maybeMessage of
     Nothing      -> error "message don't reseived"  
     where parseMessageContent input
            | isJust $ animation input  = 
-               T.unpack . file_idAn . fromJust $ animation input
+               T.unpack $ file_id ((fromJust $ animation input) :: Animation)
            | isJust $ audio input  = 
-               T.unpack . file_idAud . fromJust $ audio input    
+               T.unpack $ file_id ((fromJust $ audio input) :: Audio)    
            | isJust $ photo input  = 
-               T.unpack .file_id . head . fromJust $ photo input 
+               T.unpack $ file_id ((head . fromJust $ photo input) :: PhotoSize) 
            | isJust $ document input  = 
-               T.unpack . file_idDoc . fromJust $ document input 
+               T.unpack $ file_id (fromJust $ document input :: Document) 
            | isJust $ video input  = 
-               T.unpack . file_idVid . fromJust $ video input             
+               T.unpack $ file_id (fromJust $ video input :: Video)             
            | isJust $ voice input  = 
-               T.unpack . file_idV . fromJust $ voice input         
+               T.unpack $ file_id (fromJust $ voice input :: Voice)       
            | isJust $ sticker input  = 
-               T.unpack . file_idSt . fromJust $ sticker input                                                                               
+               T.unpack $ file_id (fromJust $ sticker input :: Sticker)                                                                             
            | isJust $ contact input  = 
                T.unpack $ (phone_number . fromJust $ contact input) 
-               <> "&first_name=" <> (first_nameCon . fromJust $ contact input)
+               <> "&first_name=" <> (first_name . fromJust $ contact input)
            | isJust $ video_note input = 
-               T.unpack . file_idVN . fromJust $ video_note input
+               T.unpack $ file_id (fromJust $ video_note input :: VideoNote)
            | isJust $ text input  = checkCommandMessage $ text input 
            | otherwise = "Can't parse your message"
 
