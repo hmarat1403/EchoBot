@@ -165,4 +165,13 @@ data VideoNote = VideoNote
                  } deriving (Show, Generic)
 instance FromJSON VideoNote
 instance ToJSON VideoNote
-
+newtype ReplyKeyboardMarkUp = ReplyKeyboardMarkUp
+                           { keyBoard :: [[KeyboardButton]]
+                           } deriving (Show, Generic)
+instance FromJSON ReplyKeyboardMarkUp
+instance ToJSON ReplyKeyboardMarkUp                           
+newtype KeyboardButton = KeyboardButton 
+                      { text :: T.Text
+                      } deriving (Show, Generic)
+instance FromJSON KeyboardButton
+instance ToJSON KeyboardButton                      
