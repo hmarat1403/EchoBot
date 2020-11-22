@@ -7,19 +7,25 @@ module Request ( buildRequest
                ) where
 
 import qualified Data.ByteString.Char8 as BC
+import qualified Data.ByteString.Lazy.Char8 as LBS (toStrict)
 import Parser ( getPrefix
               , getSendingMethod
               , getMessageContent
               , getMessageChatID
-              , PrefixMessage
+              
               , SendingMethod
               , ChatID )
 import Config ( telegramAllowUpdates
               , readToken
               , telegramLimit
-              , telegramTimeout)
-import Network.HTTP.Simple (httpLBS, parseRequest_)
-import TelegramAPI (message, TelegramResponse (result))
+              , telegramTimeout
+              , defaultKeyboard)
+import Network.HTTP.Simple (addToRequestQueryString, httpLBS, parseRequest_)
+import TelegramAPI ( message, TelegramResponse (result))
+import Data.Aeson (encode)
+import Network.HTTP.Conduit ( urlEncodedBody )
+
+
 
 
 type Host = BC.ByteString
@@ -58,17 +64,15 @@ getUpdate lastUpdateID = do
     let body = buildRequest botTelegramHost botTelegramPath token 
     let suffics = getUpdatesParametrs telegramLimit telegramTimeout 
                     telegramAllowUpdates (updateID + 1)
-    let update = body <> "/getUpdates" <> suffics                        
+    let update = body <> "/getUpdates" <> suffics          
     return update 
 
-prepareMessage :: ChatID -> PrefixMessage ->  
-                  SendingMethod -> IO BC.ByteString
-prepareMessage chatID prefix method = do
+prepareMessage :: ChatID -> SendingMethod -> IO BC.ByteString
+prepareMessage chatID method = do
     token <- telegramToken
     let reg = buildRequest botTelegramHost botTelegramPath  
               token
     let request = reg <> method <> "?chat_id=" <> chatID 
-                  <> prefix  
     return request
 
 sendMessage :: TelegramResponse -> IO ()
@@ -81,9 +85,10 @@ sendMessage decodeUpdate = do
         let cont = getMessageContent . message $ telRes
         let met = getSendingMethod . message $ telRes
         let pref = getPrefix . message $ telRes
-        request <- prepareMessage chat pref met 
-     --   print $ BC.unpack request <> cont
-        httpLBS . parseRequest_ $ (BC.unpack request <> cont)
+        request <- fmap (parseRequest_ . BC.unpack) (prepareMessage chat met)
+        let requestWithContent = addToRequestQueryString [(pref, Just cont)] request
+        let request2 = urlEncodedBody [("reply_markup", (LBS.toStrict . encode) defaultKeyboard)] requestWithContent
+        httpLBS request2
         return ()    
 
 {- data TelegramRequest = TelegramRequest

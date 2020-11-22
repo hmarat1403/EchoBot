@@ -32,15 +32,15 @@ import TelegramAPI
     , VideoNote (..)
     )
 import Data.Maybe (fromJust, isJust)
---import qualified Data.Text.Encoding as DTE
-import qualified Data.Text as T (Text, unpack, head, tail)
+import qualified Data.Text.Encoding as DTE
+import qualified Data.Text as T (Text, head, tail)
 import Network.HTTP.Simple (getResponseBody, Response)
-import qualified Data.ByteString.Lazy as L
+import qualified Data.ByteString.Lazy.Char8 as L
 import Data.Aeson (eitherDecode)
 
 
 type ChatID = BC.ByteString
-type ReseivedMessage = String
+type ReseivedMessage = BC.ByteString
 type SendingMethod = BC.ByteString
 type PrefixMessage = BC.ByteString
 
@@ -55,33 +55,38 @@ getMessageContent maybeMessage = case maybeMessage of
     Nothing      -> error "message don't reseived"  
     where parseMessageContent input
            | isJust $ animation input  = 
-               T.unpack $ file_id ((fromJust $ animation input) :: Animation)
+               DTE.encodeUtf8 $ file_id ((fromJust $ animation input) :: Animation)
            | isJust $ audio input  = 
-               T.unpack $ file_id ((fromJust $ audio input) :: Audio)    
+               DTE.encodeUtf8 $ file_id ((fromJust $ audio input) :: Audio)    
            | isJust $ photo input  = 
-               T.unpack $ file_id ((head . fromJust $ photo input) :: PhotoSize) 
+               DTE.encodeUtf8 $ file_id ((head . fromJust $ photo input) :: PhotoSize) 
            | isJust $ document input  = 
-               T.unpack $ file_id (fromJust $ document input :: Document) 
+               DTE.encodeUtf8 $ file_id (fromJust $ document input :: Document) 
            | isJust $ video input  = 
-               T.unpack $ file_id (fromJust $ video input :: Video)             
+               DTE.encodeUtf8 $ file_id (fromJust $ video input :: Video)             
            | isJust $ voice input  = 
-               T.unpack $ file_id (fromJust $ voice input :: Voice)       
+               DTE.encodeUtf8 $ file_id (fromJust $ voice input :: Voice)       
            | isJust $ sticker input  = 
-               T.unpack $ file_id (fromJust $ sticker input :: Sticker)                                                                             
+               DTE.encodeUtf8 $ file_id (fromJust $ sticker input :: Sticker)                                                                             
            | isJust $ contact input  = 
-               T.unpack $ (phone_number . fromJust $ contact input) 
+               DTE.encodeUtf8 $ (phone_number . fromJust $ contact input) 
                <> "&first_name=" <> (first_name . fromJust $ contact input)
            | isJust $ video_note input = 
-               T.unpack $ file_id (fromJust $ video_note input :: VideoNote)
+               DTE.encodeUtf8 $ file_id (fromJust $ video_note input :: VideoNote)
            | isJust $ text input  = checkCommandMessage $ text input 
            | otherwise = "Can't parse your message"
 
 checkCommandMessage :: Maybe T.Text -> ReseivedMessage
 checkCommandMessage maybeText 
-    | fromJust maybeText == "/help"      = BC.unpack defaultHelpMessage
-    | fromJust maybeText == "/repeat"   = BC.unpack defaultRepeateMessage
-    | (T.head . fromJust $ maybeText) == '#' = T.unpack . T.tail . fromJust $ maybeText
-    | otherwise                          = T.unpack . fromJust $ maybeText     
+    | fromJust maybeText == "/help"      = defaultHelpMessage
+    | fromJust maybeText == "/repeat"   = DTE.encodeUtf8 defaultRepeateMessage
+    | (T.head . fromJust $ maybeText) == '#' = DTE.encodeUtf8 . T.tail . fromJust $ maybeText
+    | otherwise                          = DTE.encodeUtf8 . fromJust $ maybeText     
+
+{- makeRepeateMessage :: String
+makeRepeateMessage = DTE.encodeUtf8 defaultRepeateMessage <> "&reply_markup=" <> (L.unpack . encode) defaultKeyboard   
+test :: String
+test = "{\"inline_keyboard\":[[{\"text\":\"1\",\"callback_data\":\"1\"}],[{\"text\":\"2\",\"callback_data\":\"2\"}]]}" -}
 
 getSendingMethod :: Maybe Message -> SendingMethod
 getSendingMethod maybeMessage = case maybeMessage of 
@@ -104,16 +109,16 @@ getPrefix maybeMessage = case maybeMessage of
     Just message -> parseMessageContent message
     Nothing      -> error "message don't reseived"  
     where parseMessageContent input
-           | isJust $ sticker input = "&sticker="
-           | isJust $ photo input = "&photo="
-           | isJust $ voice input = "&voice="
-           | isJust $ contact input = "&phone_number="
-           | isJust $ animation input = "&animation="
-           | isJust $ audio input = "&audio="
-           | isJust $ video  input = "&video="
-           | isJust $ video_note input = "&video_note="
-           | isJust $ document input = "&document="
-           | otherwise  = "&text="
+           | isJust $ sticker input = "sticker"
+           | isJust $ photo input = "photo"
+           | isJust $ voice input = "voice"
+           | isJust $ contact input = "phone_number"
+           | isJust $ animation input = "animation"
+           | isJust $ audio input = "audio"
+           | isJust $ video  input = "video"
+           | isJust $ video_note input = "video_note"
+           | isJust $ document input = "document"
+           | otherwise  = "text"
 
 getDecodeUpdate :: Response L.ByteString -> TelegramResponse
 getDecodeUpdate reseivingBC = let jsonBody = getResponseBody reseivingBC

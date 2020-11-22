@@ -27,7 +27,6 @@ main = do
         if code == 200
         then do 
             let decodedUpdate = getDecodeUpdate update
-         --   print decodedUpdate
             let num = getLastUpdateNumber decodedUpdate
             a <- readIORef startNumber
             if num <= a
@@ -39,6 +38,7 @@ main = do
                 if checkUser maybeID listOfUsers
                 then (do
                      let repeating = fromJust $ getUsersValue maybeID listOfUsers
+                     print repeating
                      forM_ [1..repeating] $ \_ -> sendMessage decodedUpdate)
                 else (do
                     let newMap = addUserToMap (fromJust maybeID) listOfUsers
@@ -46,7 +46,6 @@ main = do
                     writeMapToFile "Users.txt" newMap
                     sendMessage decodedUpdate)
                 writeIORef startNumber num
-                                                           
         else print $ "request failed: code-" <> show code 
                   <> "; message-" <> show error
 

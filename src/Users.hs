@@ -10,7 +10,7 @@ getUserID :: TelegramResponse -> Maybe Int
 getUserID decodeUpdate =  
             if null (result decodeUpdate) 
             then Nothing
-            else (<$>) id ((message . head . result $ decodeUpdate) >>= from)   
+            else (<$>) id ((message . head . result $ decodeUpdate) >>= from)    
 
 -- потом доделать для случая, когда 1 аргумент нофинг
 checkUser :: Maybe Int -> Map.Map Int Int -> Bool

@@ -11,12 +11,15 @@ module Config
        , helpMessage
        , defaultHelpMessage
        , defaultRepeateMessage
+       , defaultKeyboard
        )  where
 
 import qualified Data.ByteString.Char8 as BC 
 import qualified Data.Map as Map
 import Users ( readMapFromFile )
 import System.Directory ( doesFileExist )
+import qualified Data.Text as T 
+import TelegramAPI (InlineKeyboardButton (..), InlineKeyboardMarkUp (..))
 
 readToken :: IO BC.ByteString
 readToken = do
@@ -60,5 +63,26 @@ defaultHelpMessage = "I am echo-bot. I can send back the received messages\n\
                   \/repeat displays information about the number of\n\
                   \repeating messages and give you the opportunity\n\
                   \to change this number in the range from up to 5" 
-defaultRepeateMessage :: BC.ByteString
-defaultRepeateMessage = "Number of message repeats: 1 (default value)"                  
+
+defaultRepeateMessage :: T.Text
+defaultRepeateMessage = "Number of message repeats: 1 (default value)\n\
+                        \Click on any button to set the value:\n"   
+
+defaultKeyboard :: InlineKeyboardMarkUp
+defaultKeyboard = InlineKeyboardMarkUp { inline_keyboard = 
+                                      [ [oneButton]
+                                      , [twoButton]
+                                      , [threeButton]
+                                      , [forButton]
+                                      , [fiveButton]
+                                      ]}
+oneButton :: InlineKeyboardButton
+oneButton = InlineKeyboardButton { text = "1", callback_data = "1" }
+twoButton :: InlineKeyboardButton
+twoButton = InlineKeyboardButton { text = "2", callback_data = "2" }
+threeButton :: InlineKeyboardButton
+threeButton = InlineKeyboardButton { text = "3", callback_data = "3" }
+forButton :: InlineKeyboardButton
+forButton = InlineKeyboardButton { text = "4", callback_data = "4" }
+fiveButton :: InlineKeyboardButton
+fiveButton = InlineKeyboardButton { text = "5", callback_data = "5" }

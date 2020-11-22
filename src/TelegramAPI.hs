@@ -19,6 +19,7 @@ data Update = Update
               { update_id :: Int
               , message :: Maybe Message
               , channel_post :: Maybe Message
+              , callback_query :: Maybe CallbackQuery
               } deriving (Show, Generic)
 instance FromJSON Update
 instance ToJSON Update
@@ -40,9 +41,23 @@ data Message = Message
                , caption :: Maybe T.Text
                , caption_entities :: Maybe [MessageEntity]
                , contact :: Maybe Contact
+               , reply_markup :: Maybe InlineKeyboardMarkUp
                } deriving (Show, Generic)
 instance FromJSON Message 
 instance ToJSON Message
+data CallbackQuery = CallbackQuery
+                     { _id :: T.Text
+                     , _from :: User
+                     , _message :: Maybe Message
+                     , _inline_message_id :: Maybe T.Text
+                     , _chat_instance :: T.Text
+                     , _data :: Maybe T.Text
+                     , _game_short_name :: Maybe T.Text
+                     } deriving (Show, Generic)
+instance FromJSON CallbackQuery where
+    parseJSON = genericParseJSON defaultOptions {fieldLabelModifier = drop 1}
+instance ToJSON CallbackQuery where
+    toJSON = genericToJSON defaultOptions {fieldLabelModifier = drop 1}                      
 data Chat = Chat
             { _id :: Int
             , _type :: Maybe T.Text
@@ -165,13 +180,14 @@ data VideoNote = VideoNote
                  } deriving (Show, Generic)
 instance FromJSON VideoNote
 instance ToJSON VideoNote
-newtype ReplyKeyboardMarkUp = ReplyKeyboardMarkUp
-                           { keyBoard :: [[KeyboardButton]]
+newtype InlineKeyboardMarkUp = InlineKeyboardMarkUp
+                           { inline_keyboard :: [[InlineKeyboardButton]]
                            } deriving (Show, Generic)
-instance FromJSON ReplyKeyboardMarkUp
-instance ToJSON ReplyKeyboardMarkUp                           
-newtype KeyboardButton = KeyboardButton 
+instance FromJSON InlineKeyboardMarkUp
+instance ToJSON InlineKeyboardMarkUp                           
+data InlineKeyboardButton = InlineKeyboardButton 
                       { text :: T.Text
-                      } deriving (Show, Generic)
-instance FromJSON KeyboardButton
-instance ToJSON KeyboardButton                      
+                      , callback_data :: T.Text
+                      } deriving (Generic, Show)
+instance FromJSON InlineKeyboardButton
+instance ToJSON InlineKeyboardButton                      
