@@ -1,30 +1,31 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Request ( buildRequest
-               , getUpdatesParametrs
+               , updatesParametrs
+               , updateRequest
                , getUpdate
                , sendMessage
                , prepareMessage
                ) where
 
+import qualified Data.Text as T
 import qualified Data.ByteString.Char8 as BC
 import qualified Data.ByteString.Lazy.Char8 as LBS (toStrict)
 import Parser ( getPrefix
               , getSendingMethod
               , getMessageContent
               , getMessageChatID
-              
               , SendingMethod
               , ChatID )
-import Config ( telegramAllowUpdates
-              , readToken
+import Config ( readToken
               , telegramLimit
               , telegramTimeout
-              , defaultKeyboard)
-import Network.HTTP.Simple (addToRequestQueryString, httpLBS, parseRequest_)
-import TelegramAPI ( message, TelegramResponse (result))
+              , defaultKeyboard
+              , defaultRepeateMessage)
+import Network.HTTP.Simple (addToRequestQueryString, httpLBS, parseRequest_, Request)
+import TelegramAPI ( message, channel_post, TelegramResponse (result))
 import Data.Aeson (encode)
 import Network.HTTP.Conduit ( urlEncodedBody )
-
+import Control.Applicative ( Alternative((<|>)) )
 
 
 
@@ -35,8 +36,8 @@ type TelRequestBody = BC.ByteString
 type TelOffset = Int
 type TelLimit = Int
 type TelTimeout = Int
-type TelAllowedUpdates = BC.ByteString
-type GetUpdatesParametrs = BC.ByteString 
+type TelAllowedUpdates = [T.Text]
+type UpdatesParametrs = BC.ByteString 
 
 botTelegramHost :: Host
 botTelegramHost = "https://api.telegram.org" 
@@ -48,11 +49,10 @@ telegramToken = readToken
 buildRequest :: Host -> Path -> Token -> TelRequestBody
 buildRequest host path token = host <> path <> token 
 
-getUpdatesParametrs :: TelLimit -> TelTimeout-> TelAllowedUpdates 
-                       -> TelOffset -> GetUpdatesParametrs
-getUpdatesParametrs telLimit telTimeout telAllowedUpdates telOffset = 
+updatesParametrs :: TelLimit -> TelTimeout-> TelOffset -> UpdatesParametrs  -- запрос без TelAllowedUpdates
+updatesParametrs telLimit telTimeout telOffset = 
     "?offset=" <> telOffsetBCString <> "&limit=" <> telLimitBCString 
-    <> "&timeout=" <> telTimeoutBCString <> "&allowed_updates=" <> telAllowedUpdates
+    <> "&timeout=" <> telTimeoutBCString
     where telOffsetBCString = BC.pack . show $ telOffset
           telTimeoutBCString = BC.pack . show $ telTimeout
           telLimitBCString = BC.pack . show $ telLimit
@@ -62,10 +62,15 @@ getUpdate lastUpdateID = do
     token <- telegramToken
     updateID <- lastUpdateID
     let body = buildRequest botTelegramHost botTelegramPath token 
-    let suffics = getUpdatesParametrs telegramLimit telegramTimeout 
-                    telegramAllowUpdates (updateID + 1)
+    let suffics = updatesParametrs telegramLimit telegramTimeout (updateID + 1)
     let update = body <> "/getUpdates" <> suffics          
     return update 
+
+updateRequest :: BC.ByteString -> TelAllowedUpdates -> Request
+updateRequest updRequest allowUpdates = 
+    let request1 = parseRequest_ . BC.unpack $ updRequest
+    in  urlEncodedBody [("allowed_updates", (LBS.toStrict . encode) allowUpdates)] request1
+    
 
 prepareMessage :: ChatID -> SendingMethod -> IO BC.ByteString
 prepareMessage chatID method = do
@@ -76,20 +81,27 @@ prepareMessage chatID method = do
     return request
 
 sendMessage :: TelegramResponse -> IO ()
-sendMessage decodeUpdate = do
+sendMessage decodeUpdate = do 
     if null (result decodeUpdate) 
     then return ()
-    else do
-        let telRes = head . result $ decodeUpdate
-        let chat = getMessageChatID . message $ telRes
-        let cont = getMessageContent . message $ telRes
-        let met = getSendingMethod . message $ telRes
-        let pref = getPrefix . message $ telRes
-        request <- fmap (parseRequest_ . BC.unpack) (prepareMessage chat met)
-        let requestWithContent = addToRequestQueryString [(pref, Just cont)] request
-        let request2 = urlEncodedBody [("reply_markup", (LBS.toStrict . encode) defaultKeyboard)] requestWithContent
-        httpLBS request2
-        return ()    
+    else do let telRes = head . result $ decodeUpdate
+            let chat = getMessageChatID $ message telRes <|> channel_post telRes
+            let cont = getMessageContent $ message telRes <|> channel_post telRes
+            let met = getSendingMethod $ message telRes <|> channel_post telRes
+            let pref = getPrefix $ message telRes <|> channel_post telRes
+            request <- fmap (parseRequest_ . BC.unpack) (prepareMessage chat met)
+            if cont /= defaultRepeateMessage
+            then do 
+                let requestWithContent = addToRequestQueryString [(pref, Just cont)] request
+                httpLBS requestWithContent
+                return ()
+            else do 
+                let request2 = addToRequestQueryString [(pref, Just cont)] request
+                let requestWithContent = urlEncodedBody [("reply_markup", (LBS.toStrict . encode) defaultKeyboard)] request2
+                httpLBS requestWithContent
+                return ()
+           
+           
 
 {- data TelegramRequest = TelegramRequest
                        { hostTel :: Host
@@ -177,5 +189,5 @@ data SendVoice = SendVoice
 data SendSticker = SendSticker
                    { stickerChat_id :: Int
                    , sticker :: BC.ByteString -- file_id
-                   } deriving Show -}
-
+                   } deriving Show 
+-}

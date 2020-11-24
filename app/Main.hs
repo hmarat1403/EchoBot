@@ -8,10 +8,10 @@ import Network.HTTP.Simple ( getResponseStatus
                            , parseRequest_ )
 import Network.HTTP.Types (Status(..))
 import qualified Data.ByteString.Char8 as BC 
-import Request (getUpdate, sendMessage)
+import Request (getUpdate, sendMessage, updateRequest)
 import Data.IORef ( writeIORef, newIORef, readIORef )
 import Control.Monad (forever, forM_ )
-import Config (telegramOffset, telegramUsers)
+import Config (telegramAllowUpdates, telegramOffset, telegramUsers)
 import Data.Maybe (fromJust)
 
 
@@ -20,8 +20,8 @@ main = do
     startNumber <- newIORef telegramOffset  
     usersList <- newIORef telegramUsers
     forever $ do
-        updRequest <- getUpdate . readIORef $ startNumber
-        update <- httpLBS . parseRequest_ . BC.unpack $ updRequest
+        request <- getUpdate . readIORef $ startNumber
+        update <- httpLBS $ updateRequest request telegramAllowUpdates
         let code = statusCode . getResponseStatus $ update
         let error = statusMessage . getResponseStatus $ update
         if code == 200

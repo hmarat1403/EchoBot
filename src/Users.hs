@@ -2,15 +2,18 @@
 module Users where
 
 import Prelude hiding (id)
-import TelegramAPI (User (id), from, message, result, TelegramResponse)
+import TelegramAPI (User (id), from, _from, message, result, TelegramResponse (..), Update (..))
 import qualified Data.Map as Map
 import qualified Data.ByteString.Char8 as BC
+import Control.Applicative
 
 getUserID :: TelegramResponse -> Maybe Int
 getUserID decodeUpdate =  
             if null (result decodeUpdate) 
             then Nothing
-            else (<$>) id ((message . head . result $ decodeUpdate) >>= from)    
+            else     id <$> ((message . head . result $ decodeUpdate) >>= from)   
+                 <|> id <$> ((channel_post . head . result $ decodeUpdate) >>= from)
+                 <|> id . _from <$> (callback_query . head . result $ decodeUpdate)
 
 -- потом доделать для случая, когда 1 аргумент нофинг
 checkUser :: Maybe Int -> Map.Map Int Int -> Bool

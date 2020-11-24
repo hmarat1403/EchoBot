@@ -14,11 +14,11 @@ module Config
        , defaultKeyboard
        )  where
 
+import qualified Data.Text as T
 import qualified Data.ByteString.Char8 as BC 
 import qualified Data.Map as Map
 import Users ( readMapFromFile )
 import System.Directory ( doesFileExist )
-import qualified Data.Text as T 
 import TelegramAPI (InlineKeyboardButton (..), InlineKeyboardMarkUp (..))
 
 readToken :: IO BC.ByteString
@@ -28,7 +28,7 @@ readToken = do
     return token 
 
 telegramOffset :: Int
-telegramOffset = 0  
+telegramOffset = 793579277  
 
 telegramLimit :: Int
 telegramLimit = 10
@@ -36,8 +36,8 @@ telegramLimit = 10
 telegramTimeout :: Int
 telegramTimeout = 25
 
-telegramAllowUpdates :: BC.ByteString
-telegramAllowUpdates = BC.empty
+telegramAllowUpdates :: [T.Text]
+telegramAllowUpdates = ["message", "channel_post", "callback_query"]
 
 telegramUsers :: IO (Map.Map Int Int)
 telegramUsers = do 
@@ -64,7 +64,7 @@ defaultHelpMessage = "I am echo-bot. I can send back the received messages\n\
                   \repeating messages and give you the opportunity\n\
                   \to change this number in the range from up to 5" 
 
-defaultRepeateMessage :: T.Text
+defaultRepeateMessage :: BC.ByteString
 defaultRepeateMessage = "Number of message repeats: 1 (default value)\n\
                         \Click on any button to set the value:\n"   
 

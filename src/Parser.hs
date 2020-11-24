@@ -33,7 +33,7 @@ import TelegramAPI
     )
 import Data.Maybe (fromJust, isJust)
 import qualified Data.Text.Encoding as DTE
-import qualified Data.Text as T (Text, head, tail)
+import qualified Data.Text as T (Text)
 import Network.HTTP.Simple (getResponseBody, Response)
 import qualified Data.ByteString.Lazy.Char8 as L
 import Data.Aeson (eitherDecode)
@@ -78,15 +78,9 @@ getMessageContent maybeMessage = case maybeMessage of
 
 checkCommandMessage :: Maybe T.Text -> ReseivedMessage
 checkCommandMessage maybeText 
-    | fromJust maybeText == "/help"      = defaultHelpMessage
-    | fromJust maybeText == "/repeat"   = DTE.encodeUtf8 defaultRepeateMessage
-    | (T.head . fromJust $ maybeText) == '#' = DTE.encodeUtf8 . T.tail . fromJust $ maybeText
-    | otherwise                          = DTE.encodeUtf8 . fromJust $ maybeText     
-
-{- makeRepeateMessage :: String
-makeRepeateMessage = DTE.encodeUtf8 defaultRepeateMessage <> "&reply_markup=" <> (L.unpack . encode) defaultKeyboard   
-test :: String
-test = "{\"inline_keyboard\":[[{\"text\":\"1\",\"callback_data\":\"1\"}],[{\"text\":\"2\",\"callback_data\":\"2\"}]]}" -}
+    | fromJust maybeText == "/help"     = defaultHelpMessage
+    | fromJust maybeText == "/repeat"   = defaultRepeateMessage
+    | otherwise                         = DTE.encodeUtf8 . fromJust $ maybeText     
 
 getSendingMethod :: Maybe Message -> SendingMethod
 getSendingMethod maybeMessage = case maybeMessage of 
