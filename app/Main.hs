@@ -3,11 +3,8 @@ module Main where
 
 import Users (addUserToMap,  checkUser, getUserID, writeMapToFile, getUsersValue, changeUserInMap )
 import Parser ( getLastUpdateNumber, getDecodeUpdate, checkCallbackQuery )
-import Network.HTTP.Simple ( getResponseStatus
-                           , httpLBS
-                           , parseRequest_ )
+import Network.HTTP.Simple ( getResponseStatus, httpLBS )
 import Network.HTTP.Types (Status(..))
-import qualified Data.ByteString.Char8 as BC 
 import Request (getUpdate, sendMessage, updateRequest)
 import Data.IORef ( writeIORef, newIORef, readIORef )
 import Control.Monad (forever, forM_ )

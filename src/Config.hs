@@ -10,16 +10,15 @@ module Config
        , defaultNumberOfMessages
        , helpMessage
        , defaultHelpMessage
-       , defaultRepeateMessage
        , defaultKeyboard
        )  where
 
 import qualified Data.Text as T
 import qualified Data.ByteString.Char8 as BC 
 import qualified Data.Map as Map
-import Users ( readMapFromFile )
 import System.Directory ( doesFileExist )
 import TelegramAPI (InlineKeyboardButton (..), InlineKeyboardMarkUp (..))
+import Users (readMapFromFile)
 
 readToken :: IO BC.ByteString
 readToken = do
@@ -63,10 +62,10 @@ defaultHelpMessage = "I am echo-bot. I can send back the received messages\n\
                   \/repeat displays information about the number of\n\
                   \repeating messages and give you the opportunity\n\
                   \to change this number in the range from up to 5" 
-
-defaultRepeateMessage :: BC.ByteString
-defaultRepeateMessage = "Number of message repeats: 1 (default value)\n\
-                        \Click on any button to set the value:\n"   
+{- 
+defaultRepeatMessage :: BC.ByteString
+defaultRepeatMessage = "Number of message repeats: 1 (default value)\n\
+                        \Click on any button to set the value:\n" -}   
 
 defaultKeyboard :: InlineKeyboardMarkUp
 defaultKeyboard = InlineKeyboardMarkUp { inline_keyboard = 

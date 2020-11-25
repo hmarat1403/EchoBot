@@ -20,7 +20,8 @@ import Config ( readToken
               , telegramLimit
               , telegramTimeout
               , defaultKeyboard
-              , defaultRepeateMessage)
+              )
+import Users (readMapFromFile, makeRepeatMessage)              
 import Network.HTTP.Simple (addToRequestQueryString, httpLBS, parseRequest_, Request)
 import TelegramAPI ( message, channel_post, TelegramResponse (result))
 import Data.Aeson (encode)
@@ -90,13 +91,15 @@ sendMessage decodeUpdate = do
             let met = getSendingMethod $ message telRes <|> channel_post telRes
             let pref = getPrefix $ message telRes <|> channel_post telRes
             request <- fmap (parseRequest_ . BC.unpack) (prepareMessage chat met)
-            if cont /= defaultRepeateMessage
+            if cont /= BC.empty
             then do 
                 let requestWithContent = addToRequestQueryString [(pref, Just cont)] request
                 httpLBS requestWithContent
                 return ()
             else do 
-                let request2 = addToRequestQueryString [(pref, Just cont)] request
+                mapOfUsers <- readMapFromFile "Users.txt"
+                let contForRepeat = makeRepeatMessage decodeUpdate mapOfUsers
+                let request2 = addToRequestQueryString [(pref, Just contForRepeat)] request
                 let requestWithContent = urlEncodedBody [("reply_markup", (LBS.toStrict . encode) defaultKeyboard)] request2
                 httpLBS requestWithContent
                 return ()

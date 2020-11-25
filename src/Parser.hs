@@ -13,7 +13,8 @@ module Parser
     , ReseivedMessage
     , checkCallbackQuery
     ) where
-import Config ( defaultHelpMessage, defaultRepeateMessage ) 
+
+import Config ( defaultHelpMessage ) 
 import Prelude hiding (id )
 import qualified Data.ByteString.Char8 as BC 
 import TelegramAPI 
@@ -78,12 +79,13 @@ getMessageContent maybeMessage = case maybeMessage of
            | isJust $ text input  = checkCommandMessage $ text input 
            | otherwise = "Can't parse your message"
 
-checkCommandMessage :: Maybe T.Text -> ReseivedMessage
+checkCommandMessage :: Maybe T.Text -> BC.ByteString
 checkCommandMessage maybeText 
-    | fromJust maybeText == "/help"     = defaultHelpMessage
-    | fromJust maybeText == "/repeat"   = defaultRepeateMessage
-    | otherwise                         = DTE.encodeUtf8 . fromJust $ maybeText     
-
+    | fromJust maybeText == "/help"           = defaultHelpMessage
+    | fromJust maybeText == "/repeat"         = BC.empty
+    | fromJust maybeText == "/getMyCommands"  = "[/help, /repeat]"
+    | otherwise                               = DTE.encodeUtf8 . fromJust $ maybeText     
+                                              
 getSendingMethod :: Maybe Message -> SendingMethod
 getSendingMethod maybeMessage = case maybeMessage of 
     Just message -> parseMessageContent message
