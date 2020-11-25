@@ -11,12 +11,14 @@ module Parser
     , SendingMethod
     , ChatID
     , ReseivedMessage
+    , checkCallbackQuery
     ) where
 import Config ( defaultHelpMessage, defaultRepeateMessage ) 
 import Prelude hiding (id )
 import qualified Data.ByteString.Char8 as BC 
 import TelegramAPI 
-    ( Animation ( file_id )
+    ( CallbackQuery ( _data)
+    ,  Animation ( file_id )
     , Update (..)
     , TelegramResponse (result)
     , Contact (phone_number, first_name)
@@ -33,7 +35,7 @@ import TelegramAPI
     )
 import Data.Maybe (fromJust, isJust)
 import qualified Data.Text.Encoding as DTE
-import qualified Data.Text as T (Text)
+import qualified Data.Text as T (Text, unpack)
 import Network.HTTP.Simple (getResponseBody, Response)
 import qualified Data.ByteString.Lazy.Char8 as L
 import Data.Aeson (eitherDecode)
@@ -113,6 +115,10 @@ getPrefix maybeMessage = case maybeMessage of
            | isJust $ video_note input = "video_note"
            | isJust $ document input = "document"
            | otherwise  = "text"
+
+checkCallbackQuery :: TelegramResponse -> Maybe Int
+checkCallbackQuery newResponse = fmap (read . T.unpack) (maybeCallback >>= _data )
+    where maybeCallback = callback_query . head . result $ newResponse
 
 getDecodeUpdate :: Response L.ByteString -> TelegramResponse
 getDecodeUpdate reseivingBC = let jsonBody = getResponseBody reseivingBC

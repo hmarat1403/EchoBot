@@ -25,6 +25,7 @@ instance FromJSON Update
 instance ToJSON Update
 data Message = Message
                { message_id :: Int
+               , sender_chat :: Maybe Chat
                , from :: Maybe User
                , chat :: Chat
                , date :: Int

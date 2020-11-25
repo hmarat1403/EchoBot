@@ -1,8 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 
-import Users (addUserToMap,  checkUser, getUserID, writeMapToFile, getUsersValue )
-import Parser ( getLastUpdateNumber, getDecodeUpdate )
+import Users (addUserToMap,  checkUser, getUserID, writeMapToFile, getUsersValue, changeUserInMap )
+import Parser ( getLastUpdateNumber, getDecodeUpdate, checkCallbackQuery )
 import Network.HTTP.Simple ( getResponseStatus
                            , httpLBS
                            , parseRequest_ )
@@ -12,7 +12,7 @@ import Request (getUpdate, sendMessage, updateRequest)
 import Data.IORef ( writeIORef, newIORef, readIORef )
 import Control.Monad (forever, forM_ )
 import Config (telegramAllowUpdates, telegramOffset, telegramUsers)
-import Data.Maybe (fromJust)
+import Data.Maybe (fromJust, isJust)
 
 
 main :: IO ()
@@ -37,9 +37,17 @@ main = do
                 listOfUsers <- listOfUsersIO
                 if checkUser maybeID listOfUsers
                 then (do
-                     let repeating = fromJust $ getUsersValue maybeID listOfUsers
-                     print repeating
-                     forM_ [1..repeating] $ \_ -> sendMessage decodedUpdate)
+                     let checkCQ = checkCallbackQuery decodedUpdate
+                     if isJust checkCQ
+                     then (do 
+                        let repeating = fromJust checkCQ
+                        let newMap = changeUserInMap repeating (fromJust maybeID) listOfUsers
+                        writeIORef usersList . return $ newMap
+                        writeMapToFile "Users.txt" newMap)
+                     else (do    
+                        let repeating = fromJust $ getUsersValue maybeID listOfUsers
+                        forM_ [1..repeating] $ \_ -> sendMessage decodedUpdate)
+                     )
                 else (do
                     let newMap = addUserToMap (fromJust maybeID) listOfUsers
                     writeIORef usersList . return $ newMap

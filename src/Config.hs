@@ -28,7 +28,7 @@ readToken = do
     return token 
 
 telegramOffset :: Int
-telegramOffset = 793579277  
+telegramOffset = 793579284 
 
 telegramLimit :: Int
 telegramLimit = 10
