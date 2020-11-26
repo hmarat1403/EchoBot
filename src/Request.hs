@@ -23,7 +23,7 @@ import Config ( readToken
               )
 import Users (readMapFromFile, makeRepeatMessage)              
 import Network.HTTP.Simple (addToRequestQueryString, httpLBS, parseRequest_, Request)
-import TelegramAPI ( message, channel_post, TelegramResponse (result))
+import TelegramAPI ( message, channel_post, callback_query, TelegramResponse (result))
 import Data.Aeson (encode)
 import Network.HTTP.Conduit ( urlEncodedBody )
 import Control.Applicative ( Alternative((<|>)) )
@@ -86,7 +86,7 @@ sendMessage decodeUpdate = do
     if null (result decodeUpdate) 
     then return ()
     else do let telRes = head . result $ decodeUpdate
-            let chat = getMessageChatID $ message telRes <|> channel_post telRes
+            let chat = getMessageChatID telRes 
             let cont = getMessageContent $ message telRes <|> channel_post telRes
             let met = getSendingMethod $ message telRes <|> channel_post telRes
             let pref = getPrefix $ message telRes <|> channel_post telRes

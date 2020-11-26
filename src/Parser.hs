@@ -18,8 +18,9 @@ import Config ( defaultHelpMessage )
 import Prelude hiding (id )
 import qualified Data.ByteString.Char8 as BC 
 import TelegramAPI 
-    ( CallbackQuery ( _data)
-    ,  Animation ( file_id )
+    ( CallbackQuery ( _data, _from)
+    , User ( id )
+    , Animation ( file_id )
     , Update (..)
     , TelegramResponse (result)
     , Contact (phone_number, first_name)
@@ -47,15 +48,16 @@ type ReseivedMessage = BC.ByteString
 type SendingMethod = BC.ByteString
 type PrefixMessage = BC.ByteString
 
-getMessageChatID :: Maybe Message -> ChatID
-getMessageChatID maybeMessage = case maybeMessage of
-    Just message -> BC.pack . show . _id . chat $ message
-    Nothing      -> error "message don't reseived"
+getMessageChatID :: Update -> ChatID
+getMessageChatID update  
+    | isJust $ message update           = BC.pack . show . _id . chat $ fromJust $ message update
+    | isJust $ channel_post update     = BC.pack . show . _id . chat $ fromJust $ message update
+    | isJust $ callback_query update    = BC.pack . show . id . _from $ fromJust $ callback_query update
+    | otherwise                       = error "message don't reseived"
+   
 
 getMessageContent :: Maybe Message -> ReseivedMessage   
-getMessageContent maybeMessage = case maybeMessage of 
-    Just message -> parseMessageContent message
-    Nothing      -> error "message don't reseived"  
+getMessageContent = maybe "Setting new value" parseMessageContent
     where parseMessageContent input
            | isJust $ animation input  = 
                DTE.encodeUtf8 $ file_id ((fromJust $ animation input) :: Animation)
@@ -87,9 +89,7 @@ checkCommandMessage maybeText
     | otherwise                               = DTE.encodeUtf8 . fromJust $ maybeText     
                                               
 getSendingMethod :: Maybe Message -> SendingMethod
-getSendingMethod maybeMessage = case maybeMessage of 
-    Just message -> parseMessageContent message
-    Nothing      -> error "message don't reseived"  
+getSendingMethod = maybe "/sendMessage" parseMessageContent 
     where parseMessageContent input
            | isJust $ animation input  = "/sendAnimation"
            | isJust $ audio input  = "/sendAudio"    
@@ -100,12 +100,11 @@ getSendingMethod maybeMessage = case maybeMessage of
            | isJust $ voice input  = "/sendVoice"        
            | isJust $ sticker input  = "/sendSticker"             
            | isJust $ contact input  = "/sendContact" 
-           | otherwise = "/sendMessage"
+           | otherwise               = "/sendMessage"
+         
 
 getPrefix :: Maybe Message -> PrefixMessage
-getPrefix maybeMessage = case maybeMessage of 
-    Just message -> parseMessageContent message
-    Nothing      -> error "message don't reseived"  
+getPrefix = maybe "text" parseMessageContent 
     where parseMessageContent input
            | isJust $ sticker input = "sticker"
            | isJust $ photo input = "photo"
@@ -116,7 +115,8 @@ getPrefix maybeMessage = case maybeMessage of
            | isJust $ video  input = "video"
            | isJust $ video_note input = "video_note"
            | isJust $ document input = "document"
-           | otherwise  = "text"
+           | otherwise               = "text"
+         
 
 checkCallbackQuery :: TelegramResponse -> Maybe Int
 checkCallbackQuery newResponse = fmap (read . T.unpack) (maybeCallback >>= _data )

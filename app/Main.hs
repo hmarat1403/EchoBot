@@ -40,7 +40,8 @@ main = do
                         let repeating = fromJust checkCQ
                         let newMap = changeUserInMap repeating (fromJust maybeID) listOfUsers
                         writeIORef usersList . return $ newMap
-                        writeMapToFile "Users.txt" newMap)
+                        writeMapToFile "Users.txt" newMap                        
+                        sendMessage decodedUpdate)
                      else (do    
                         let repeating = fromJust $ getUsersValue maybeID listOfUsers
                         forM_ [1..repeating] $ \_ -> sendMessage decodedUpdate)
