@@ -2,6 +2,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Parser
     ( getMessageContent
+    , getMessageEntity
+    , getMessageCaption
+    , getMessageCaptionEntity
     , getPrefix
     , getSendingMethod
     , getMessageChatID
@@ -18,7 +21,9 @@ import Config ( defaultHelpMessage )
 import Prelude hiding (id )
 import qualified Data.ByteString.Char8 as BC 
 import TelegramAPI 
-    ( CallbackQuery ( _data, _from)
+    (caption_entities, caption,  entities
+    
+    , CallbackQuery ( _data, _from)
     , User ( id )
     , Animation ( file_id )
     , Update (..)
@@ -40,7 +45,8 @@ import qualified Data.Text.Encoding as DTE
 import qualified Data.Text as T (Text, unpack)
 import Network.HTTP.Simple (getResponseBody, Response)
 import qualified Data.ByteString.Lazy.Char8 as L
-import Data.Aeson (eitherDecode)
+import Data.Aeson (eitherDecode, encode)
+import qualified Data.ByteString.Lazy as LBS
 
 
 type ChatID = BC.ByteString
@@ -55,7 +61,6 @@ getMessageChatID update
     | isJust $ callback_query update    = BC.pack . show . id . _from $ fromJust $ callback_query update
     | otherwise                       = error "message don't reseived"
    
-
 getMessageContent :: Maybe Message -> ReseivedMessage   
 getMessageContent = maybe "Setting new value" parseMessageContent
     where parseMessageContent input
@@ -86,7 +91,16 @@ checkCommandMessage maybeText
     | fromJust maybeText == "/help"           = defaultHelpMessage
     | fromJust maybeText == "/repeat"         = BC.empty
     | fromJust maybeText == "/getMyCommands"  = "[/help, /repeat]"
-    | otherwise                               = DTE.encodeUtf8 . fromJust $ maybeText     
+    | otherwise                               = DTE.encodeUtf8 . fromJust $ maybeText   
+
+getMessageEntity :: Maybe Message -> Maybe BC.ByteString
+getMessageEntity = fmap (LBS.toStrict . encode . entities)
+
+getMessageCaption :: Maybe Message -> Maybe BC.ByteString
+getMessageCaption input = fmap DTE.encodeUtf8 (input >>= caption)
+
+getMessageCaptionEntity :: Maybe Message -> Maybe BC.ByteString
+getMessageCaptionEntity = fmap (LBS.toStrict . encode . caption_entities)      
                                               
 getSendingMethod :: Maybe Message -> SendingMethod
 getSendingMethod = maybe "/sendMessage" parseMessageContent 

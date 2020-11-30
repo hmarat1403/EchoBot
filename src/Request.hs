@@ -10,7 +10,10 @@ module Request ( buildRequest
 import qualified Data.Text as T
 import qualified Data.ByteString.Char8 as BC
 import qualified Data.ByteString.Lazy.Char8 as LBS (toStrict)
-import Parser ( getPrefix
+import Parser ( getMessageCaptionEntity
+              , getMessageCaption
+              , getMessageEntity
+              , getPrefix
               , getSendingMethod
               , getMessageContent
               , getMessageChatID
@@ -23,7 +26,7 @@ import Config ( readToken
               )
 import Users (readMapFromFile, makeRepeatMessage)              
 import Network.HTTP.Simple (addToRequestQueryString, httpLBS, parseRequest_, Request)
-import TelegramAPI ( message, channel_post, callback_query, TelegramResponse (result))
+import TelegramAPI ( message, channel_post, TelegramResponse (result))
 import Data.Aeson (encode)
 import Network.HTTP.Conduit ( urlEncodedBody )
 import Control.Applicative ( Alternative((<|>)) )
@@ -88,12 +91,23 @@ sendMessage decodeUpdate = do
     else do let telRes = head . result $ decodeUpdate
             let chat = getMessageChatID telRes 
             let cont = getMessageContent $ message telRes <|> channel_post telRes
-            let met = getSendingMethod $ message telRes <|> channel_post telRes
             let pref = getPrefix $ message telRes <|> channel_post telRes
+            let ent = getMessageEntity $ message telRes <|> channel_post telRes
+            let entPref = "entities"
+            let cap = getMessageCaption $ message telRes <|> channel_post telRes
+            let capPref = "caption"
+            let cap_ent = getMessageCaptionEntity $ message telRes <|> channel_post telRes
+            let cap_entPref = "caption_entities"
+            let met = getSendingMethod $ message telRes <|> channel_post telRes
             request <- fmap (parseRequest_ . BC.unpack) (prepareMessage chat met)
             if cont /= BC.empty
             then do 
-                let requestWithContent = addToRequestQueryString [(pref, Just cont)] request
+                let requestWithContent = addToRequestQueryString 
+                                         [ (pref, Just cont)
+                                         , (entPref, ent)
+                                         , (capPref, cap)
+                                         , (cap_entPref, cap_ent)
+                                         ] request
                 httpLBS requestWithContent
                 return ()
             else do 

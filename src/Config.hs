@@ -62,10 +62,6 @@ defaultHelpMessage = "I am echo-bot. I can send back the received messages\n\
                   \/repeat displays information about the number of\n\
                   \repeating messages and give you the opportunity\n\
                   \to change this number in the range from up to 5" 
-{- 
-defaultRepeatMessage :: BC.ByteString
-defaultRepeatMessage = "Number of message repeats: 1 (default value)\n\
-                        \Click on any button to set the value:\n" -}   
 
 defaultKeyboard :: InlineKeyboardMarkUp
 defaultKeyboard = InlineKeyboardMarkUp { inline_keyboard = 

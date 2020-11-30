@@ -146,7 +146,7 @@ instance ToJSON Video
 data Voice = Voice
              { file_id :: T.Text
              , file_unique_id :: T.Text
-             , durationV:: Int
+             , duration:: Int
              } deriving (Show, Generic)
 instance FromJSON Voice
 instance ToJSON Voice
