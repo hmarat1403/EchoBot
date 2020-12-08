@@ -1,8 +1,18 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 
-import Users (addUserToMap,  checkUser, getUserID, writeMapToFile, getUsersValue, changeUserInMap )
-import Parser ( getLastUpdateNumber, getDecodeUpdate, checkCallbackQuery )
+import Users ( addUserToMap
+             , checkUser
+             , getUserID
+             , writeMapToFile
+             , getUsersValue
+             , changeUserInMap
+             )
+import Parser ( getLastUpdateNumber
+              , getDecodeUpdate
+              , checkCallbackQuery 
+              , checkCommand 
+              )
 import Network.HTTP.Simple ( getResponseStatus, httpLBS )
 import Network.HTTP.Types (Status(..))
 import Request (getUpdate, sendMessage, updateRequest)
@@ -43,9 +53,12 @@ main = do
                         writeMapToFile "Users.txt" newMap                        
                         sendMessage decodedUpdate)
                      else (do    
-                        let repeating = fromJust $ getUsersValue maybeID listOfUsers
-                        forM_ [1..repeating] $ \_ -> sendMessage decodedUpdate)
-                     )
+                        if checkCommand decodedUpdate
+                        then sendMessage decodedUpdate
+                        else (do 
+                             let repeating = fromJust $ getUsersValue maybeID listOfUsers
+                             forM_ [1..repeating] $ \_ -> sendMessage decodedUpdate))
+                           )
                 else (do
                     let newMap = addUserToMap (fromJust maybeID) listOfUsers
                     writeIORef usersList . return $ newMap

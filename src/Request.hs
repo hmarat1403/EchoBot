@@ -100,21 +100,25 @@ sendMessage decodeUpdate = do
             let cap_entPref = "caption_entities"
             let met = getSendingMethod $ message telRes <|> channel_post telRes
             request <- fmap (parseRequest_ . BC.unpack) (prepareMessage chat met)
-            if cont /= BC.empty
+            if (snd . head $ cont) /= Just BC.empty
             then do 
-                let requestWithContent = addToRequestQueryString 
-                                         [ (pref, Just cont)
-                                         , (entPref, ent)
+                let requestWithContent = addToRequestQueryString cont request
+                let requestWithEntity = addToRequestQueryString 
+                                         [ (entPref, ent)
                                          , (capPref, cap)
                                          , (cap_entPref, cap_ent)
-                                         ] request
-                httpLBS requestWithContent
+                                         ] requestWithContent
+                httpLBS requestWithEntity
                 return ()
             else do 
                 mapOfUsers <- readMapFromFile "Users.txt"
                 let contForRepeat = makeRepeatMessage decodeUpdate mapOfUsers
-                let request2 = addToRequestQueryString [(pref, Just contForRepeat)] request
-                let requestWithContent = urlEncodedBody [("reply_markup", (LBS.toStrict . encode) defaultKeyboard)] request2
+                let request2 = 
+                     addToRequestQueryString [(pref, Just contForRepeat)] request
+                let requestWithContent = 
+                     urlEncodedBody [ ("reply_markup"
+                                    , (LBS.toStrict . encode) defaultKeyboard)
+                                    ] request2
                 httpLBS requestWithContent
                 return ()
            

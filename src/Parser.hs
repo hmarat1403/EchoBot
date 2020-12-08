@@ -13,7 +13,6 @@ module Parser
     , PrefixMessage
     , SendingMethod
     , ChatID
-    , ReseivedMessage
     , checkCallbackQuery
     , checkCommand
     ) where
@@ -22,14 +21,15 @@ import Config ( defaultHelpMessage )
 import Prelude hiding (id )
 import qualified Data.ByteString.Char8 as BC 
 import TelegramAPI 
-    (caption_entities, caption,  entities
-    
+    ( caption_entities
+    , caption
+    ,  entities
     , CallbackQuery ( _data, _from)
     , User ( id )
     , Animation ( file_id )
     , Update (..)
     , TelegramResponse (result)
-    , Contact (phone_number, first_name)
+    , Contact (phone_number, first_name, last_name, user_id, vcard)
     , Sticker (file_id)
     , Voice(file_id)
     , Video ( file_id )
@@ -44,14 +44,14 @@ import TelegramAPI
 import Data.Maybe (fromJust, isJust)
 import qualified Data.Text.Encoding as DTE
 import qualified Data.Text as T (Text, unpack)
-import Network.HTTP.Simple (getResponseBody, Response, addToRequestQueryString)
+import Network.HTTP.Simple (getResponseBody, Response, Query)
 import qualified Data.ByteString.Lazy.Char8 as L
 import Data.Aeson (eitherDecode, encode)
 import qualified Data.ByteString.Lazy as LBS
 
 
 type ChatID = BC.ByteString
-type ReseivedMessage = [(BC.ByteString, BC.ByteString)]
+--type ReseivedMessage = Query
 type SendingMethod = BC.ByteString
 type PrefixMessage = BC.ByteString
 
@@ -71,49 +71,60 @@ checkCommand newResponse =
                       | otherwise                = False 
     in maybe False checkJust maybeText
 
-getMessageContent :: Maybe Message -> ReseivedMessage   
-getMessageContent = maybe ["text", "Setting new value"] parseMessageContent
+getMessageContent :: Maybe Message -> Query
+getMessageContent = maybe [("text", Just "Setting new value")] parseMessageContent
     where parseMessageContent input
            | isJust $ animation input = 
                [( "animation"
-                , DTE.encodeUtf8 $ file_id ((fromJust $ animation input) :: Animation)
+                , Just $ DTE.encodeUtf8 $ file_id (fromJust $ animation input :: Animation)
                 )]
            | isJust $ audio input = 
                [("audio"
-                , DTE.encodeUtf8 $ file_id ((fromJust $ audio input) :: Audio) 
+                , Just $ DTE.encodeUtf8 $ file_id (fromJust $ audio input :: Audio)
                 )]   
            | isJust $ photo input = 
                [("photo"
-                , DTE.encodeUtf8 $ file_id ((head . fromJust $ photo input) :: PhotoSize) 
+                , Just $ DTE.encodeUtf8 $ file_id (head . fromJust $ photo input :: PhotoSize) 
                 )]
            | isJust $ document input = 
                [("document"
-                , DTE.encodeUtf8 $ file_id (fromJust $ document input :: Document) 
+                , Just $ DTE.encodeUtf8 $ file_id (fromJust $ document input :: Document) 
                 )]
            | isJust $ video input = 
                [("video"
-                , DTE.encodeUtf8 $ file_id (fromJust $ video input :: Video)             
+                , Just $ DTE.encodeUtf8 $ file_id (fromJust $ video input :: Video)             
                 )]
            | isJust $ voice input =
                [("voice"
-                , DTE.encodeUtf8 $ file_id (fromJust $ voice input :: Voice)   
+                , Just $ DTE.encodeUtf8 $ file_id (fromJust $ voice input :: Voice)   
                 )]    
            | isJust $ sticker input =
                [("sticker"
-                , DTE.encodeUtf8 $ file_id (fromJust $ sticker input :: Sticker)  
+                , Just $ DTE.encodeUtf8 $ file_id (fromJust $ sticker input :: Sticker)  
                 )]                                                                           
            | isJust $ contact input = 
                [("phone_number"
-                , makeContactMessage $ contact input
+                , DTE.encodeUtf8 . phone_number <$> contact input)
+               ,("first_name" 
+                , DTE.encodeUtf8 . first_name <$> contact input)
+               ,("last_name"
+                , DTE.encodeUtf8 <$> (contact input >>= last_name))
+               ,("user_id"
+                , BC.pack . show <$> (contact input >>= user_id))
+               , ("vcard"
+                , DTE.encodeUtf8 <$> (contact input >>= vcard)
+                )]
            | isJust $ video_note input = 
-               DTE.encodeUtf8 $ file_id (fromJust $ video_note input :: VideoNote)
-           | isJust $ text input  = checkCommandMessage $ text input 
-           | otherwise = "Can't parse your message"
+               [("video_note"
+                , Just $ DTE.encodeUtf8 $ file_id (fromJust $ video_note input :: VideoNote)
+                )]
+           | isJust $ text input = 
+               [("text"
+                , Just $ checkCommandMessage $ text input 
+                )]
+           | isJust poll
+           | otherwise = [("text", Just "Can't parse your message")]
 
-makeContactMessage 
-
-
-    
                
 checkCommandMessage :: Maybe T.Text -> BC.ByteString
 checkCommandMessage maybeText 
