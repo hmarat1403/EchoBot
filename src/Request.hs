@@ -7,16 +7,13 @@ module Request ( buildRequest
                , prepareMessage
                ) where
 
-import qualified Data.Text as T
-import qualified Data.ByteString.Char8 as BC
-import qualified Data.ByteString.Lazy.Char8 as LBS (toStrict)
 import Parser ( getMessageCaptionEntity
               , getMessageCaption
               , getMessageEntity
-              , getPrefix
               , getSendingMethod
               , getMessageContent
               , getMessageChatID
+              , makeRepeatMessage
               , SendingMethod
               , ChatID )
 import Config ( readToken
@@ -24,9 +21,12 @@ import Config ( readToken
               , telegramTimeout
               , defaultKeyboard
               )
-import Users (readMapFromFile, makeRepeatMessage)              
+import Users (readMapFromFile)  
+import TelegramAPI ( message, channel_post, TelegramResponse (result))   
+import qualified Data.Text as T
+import qualified Data.ByteString.Char8 as BC
+import qualified Data.ByteString.Lazy.Char8 as LBS (toStrict)         
 import Network.HTTP.Simple (addToRequestQueryString, httpLBS, parseRequest_, Request)
-import TelegramAPI ( message, channel_post, TelegramResponse (result))
 import Data.Aeson (encode)
 import Network.HTTP.Conduit ( urlEncodedBody )
 import Control.Applicative ( Alternative((<|>)) )
@@ -91,35 +91,25 @@ sendMessage decodeUpdate = do
     else do let telRes = head . result $ decodeUpdate
             let chat = getMessageChatID telRes 
             let cont = getMessageContent $ message telRes <|> channel_post telRes
-            let pref = getPrefix $ message telRes <|> channel_post telRes
             let ent = getMessageEntity $ message telRes <|> channel_post telRes
-            let entPref = "entities"
             let cap = getMessageCaption $ message telRes <|> channel_post telRes
-            let capPref = "caption"
             let cap_ent = getMessageCaptionEntity $ message telRes <|> channel_post telRes
-            let cap_entPref = "caption_entities"
-            let met = getSendingMethod $ message telRes <|> channel_post telRes
-            request <- fmap (parseRequest_ . BC.unpack) (prepareMessage chat met)
+            let meth = getSendingMethod $ message telRes <|> channel_post telRes
+            request <- fmap (parseRequest_ . BC.unpack) (prepareMessage chat meth)
             if (snd . head $ cont) /= Just BC.empty
             then do 
-                let requestWithContent = addToRequestQueryString cont request
-                let requestWithEntity = addToRequestQueryString 
-                                         [ (entPref, ent)
-                                         , (capPref, cap)
-                                         , (cap_entPref, cap_ent)
-                                         ] requestWithContent
-                httpLBS requestWithEntity
+                let requestWithContent = addToRequestQueryString (cont <> ent <> cap <> cap_ent) request
+                httpLBS requestWithContent
                 return ()
             else do 
                 mapOfUsers <- readMapFromFile "Users.txt"
                 let contForRepeat = makeRepeatMessage decodeUpdate mapOfUsers
-                let request2 = 
-                     addToRequestQueryString [(pref, Just contForRepeat)] request
-                let requestWithContent = 
+                let requestWithContent = addToRequestQueryString contForRepeat request
+                let requestWithKeyboard = 
                      urlEncodedBody [ ("reply_markup"
                                     , (LBS.toStrict . encode) defaultKeyboard)
-                                    ] request2
-                httpLBS requestWithContent
+                                    ] requestWithContent
+                httpLBS requestWithKeyboard
                 return ()
            
            
@@ -163,7 +153,7 @@ data GetUpdates = GetUpdates
                  , timeout :: TelTimeout
                  , allowed_updates :: [TelAllowedUpdates]
                  } deriving (Show, Generic)
-         
+                    
 
 data SendPhoto = SendPhoto 
                  { photoChat_id :: Int

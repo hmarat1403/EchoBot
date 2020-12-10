@@ -5,7 +5,6 @@ module Parser
     , getMessageEntity
     , getMessageCaption
     , getMessageCaptionEntity
-    , getPrefix
     , getSendingMethod
     , getMessageChatID
     , getLastUpdateNumber
@@ -15,11 +14,11 @@ module Parser
     , ChatID
     , checkCallbackQuery
     , checkCommand
+    , makeRepeatMessage
     ) where
 
 import Config ( defaultHelpMessage ) 
-import Prelude hiding (id )
-import qualified Data.ByteString.Char8 as BC 
+import Users (getUserID, getUsersValue)
 import TelegramAPI 
     ( caption_entities
     , caption
@@ -41,17 +40,19 @@ import TelegramAPI
               audio, video, video_note, document)
     , VideoNote (..)
     )
+import Prelude hiding (id )
+import Network.HTTP.Simple (getResponseBody, Response, Query)
+import Data.Aeson (eitherDecode, encode)
 import Data.Maybe (fromJust, isJust)
+import qualified Data.Map as Map
 import qualified Data.Text.Encoding as DTE
 import qualified Data.Text as T (Text, unpack)
-import Network.HTTP.Simple (getResponseBody, Response, Query)
 import qualified Data.ByteString.Lazy.Char8 as L
-import Data.Aeson (eitherDecode, encode)
+import qualified Data.ByteString.Char8 as BC     
 import qualified Data.ByteString.Lazy as LBS
 
 
 type ChatID = BC.ByteString
---type ReseivedMessage = Query
 type SendingMethod = BC.ByteString
 type PrefixMessage = BC.ByteString
 
@@ -122,7 +123,6 @@ getMessageContent = maybe [("text", Just "Setting new value")] parseMessageConte
                [("text"
                 , Just $ checkCommandMessage $ text input 
                 )]
-           | isJust poll
            | otherwise = [("text", Just "Can't parse your message")]
 
                
@@ -130,17 +130,17 @@ checkCommandMessage :: Maybe T.Text -> BC.ByteString
 checkCommandMessage maybeText 
     | fromJust maybeText == "/help"           = defaultHelpMessage
     | fromJust maybeText == "/repeat"         = BC.empty
-    | fromJust maybeText == "/getMyCommands"  = "[/help, /repeat]"
+    | fromJust maybeText == "/getMyCommands"  = "[/help, /repeat, /getMyCommands]"
     | otherwise                               = DTE.encodeUtf8 . fromJust $ maybeText   
 
-getMessageEntity :: Maybe Message -> Maybe BC.ByteString
-getMessageEntity = fmap (LBS.toStrict . encode . entities)
+getMessageEntity :: Maybe Message -> Query
+getMessageEntity input = [("entities", fmap (LBS.toStrict . encode . entities) input)]
 
-getMessageCaption :: Maybe Message -> Maybe BC.ByteString
-getMessageCaption input = fmap DTE.encodeUtf8 (input >>= caption)
+getMessageCaption :: Maybe Message -> Query
+getMessageCaption input = [("caption", fmap DTE.encodeUtf8 (input >>= caption))]
 
-getMessageCaptionEntity :: Maybe Message -> Maybe BC.ByteString
-getMessageCaptionEntity = fmap (LBS.toStrict . encode . caption_entities)      
+getMessageCaptionEntity :: Maybe Message -> Query
+getMessageCaptionEntity input = [("caption_entities", fmap (LBS.toStrict . encode . caption_entities) input)]     
                                               
 getSendingMethod :: Maybe Message -> SendingMethod
 getSendingMethod = maybe "/sendMessage" parseMessageContent 
@@ -156,20 +156,6 @@ getSendingMethod = maybe "/sendMessage" parseMessageContent
            | isJust $ contact input  = "/sendContact" 
            | otherwise               = "/sendMessage"
          
-
-getPrefix :: Maybe Message -> PrefixMessage
-getPrefix = maybe "text" parseMessageContent 
-    where parseMessageContent input
-           | isJust $ sticker input = "sticker"
-           | isJust $ photo input = "photo"
-           | isJust $ voice input = "voice"
-           | isJust $ contact input = "phone_number"
-           | isJust $ animation input = "animation"
-           | isJust $ audio input = "audio"
-           | isJust $ video  input = "video"
-           | isJust $ video_note input = "video_note"
-           | isJust $ document input = "document"
-           | otherwise               = "text"
          
 
 checkCallbackQuery :: TelegramResponse -> Maybe Int
@@ -188,4 +174,13 @@ getLastUpdateNumber decodeUpdate =
             if null (result decodeUpdate) 
             then 0
             else update_id . head . result $ decodeUpdate 
+
+makeRepeatMessage:: TelegramResponse -> Map.Map Int Int -> Query  -- checking value of repeats
+makeRepeatMessage newResponse mapUsers = [("text", Just messageForRepeate)]  
+    where messageForRepeate = messageFor <> "\n Click on any button to set the value:"
+          messageFor = maybe defaultMessage (\number -> 
+                            "Number of message repeats: " <> (BC.pack . show) number) maybeNumber
+          maybeNumber = getUsersValue (getUserID newResponse) mapUsers                  
+          defaultMessage = "Number of message repeats: 1 (default value)\n\
+                        \Click on any button to set the value:\n"            
              

@@ -7,9 +7,9 @@ import qualified Data.Map as Map
 import qualified Data.ByteString.Char8 as BC
 import Control.Applicative ( Alternative((<|>)) )
 
-
 getUserID :: TelegramResponse -> Maybe Int
 getUserID decodeUpdate =  
+
             if null (result decodeUpdate) 
             then Nothing
             else     id <$> ((message . head . result $ decodeUpdate) >>= from)   
@@ -17,13 +17,6 @@ getUserID decodeUpdate =
                  <|> id . _from <$> (callback_query . head . result $ decodeUpdate)
                  <|> Just 1
 
-makeRepeatMessage:: TelegramResponse -> Map.Map Int Int -> BC.ByteString  -- checking value of repeats
-makeRepeatMessage newResponse mapUsers = messagePrefix <> "\n Click on any button to set the value:" 
-    where messagePrefix = maybe defaultMessage (\number -> 
-                            "Number of message repeats: " <> (BC.pack . show) number) maybeNumber
-          maybeNumber = getUsersValue (getUserID newResponse) mapUsers                  
-          defaultMessage = "Number of message repeats: 1 (default value)\n\
-                        \Click on any button to set the value:\n"
 -- потом доделать для случая, когда 1 аргумент нофинг
 checkUser :: Maybe Int -> Map.Map Int Int -> Bool
 checkUser maybeUserID userMap = let maybeValue = maybeUserID >>= (`Map.lookup` userMap) 
