@@ -1,10 +1,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Request ( buildRequest
                , updatesParametrs
-               , updateRequest
                , getUpdate
                , sendMessage
                , prepareMessage
+               , makeUpdateRequest
                ) where
 
 import Parser (getMessageCaptionEntity
@@ -20,6 +20,7 @@ import Config ( readToken
               , telegramLimit
               , telegramTimeout
               , defaultKeyboard
+              , telegramAllowUpdates
               )
 import Users (readMapFromFile)  
 import TelegramAPI (TelegramResponse ())   
@@ -28,7 +29,7 @@ import qualified Data.ByteString.Char8 as BC
 import qualified Data.ByteString.Lazy.Char8 as LBS (toStrict)         
 import Network.HTTP.Simple (addToRequestQueryString, httpLBS, parseRequest_, Request)
 import Data.Aeson (encode)
-import Network.HTTP.Conduit ( urlEncodedBody )
+--import Network.HTTP.Conduit ( setQueryString )
 import Control.Monad (unless)
 
 
@@ -45,53 +46,48 @@ type UpdatesParametrs = BC.ByteString
 
 botTelegramHost :: Host
 botTelegramHost = "https://api.telegram.org" 
-botTelegramPath ::Path
+botTelegramPath :: Path
 botTelegramPath = "/bot"  
-telegramToken :: IO Token
-telegramToken = readToken
+allowUpdates :: TelAllowedUpdates
+allowUpdates = telegramAllowUpdates
+
 
 buildRequest :: Host -> Path -> Token -> TelRequest
 buildRequest host path token = host <> path <> token 
 
 updatesParametrs :: TelLimit -> TelTimeout-> TelOffset -> UpdatesParametrs  -- запрос без TelAllowedUpdates
 updatesParametrs telLimit telTimeout telOffset = 
-    "?offset=" <> telOffsetBCString <> "&limit=" <> telLimitBCString 
-    <> "&timeout=" <> telTimeoutBCString
+    "?offset=" <> telOffsetBCString <> "&limit=" <> telLimitBCString <> "&timeout=" <> telTimeoutBCString 
     where telOffsetBCString = BC.pack . show $ telOffset
           telTimeoutBCString = BC.pack . show $ telTimeout
           telLimitBCString = BC.pack . show $ telLimit
-
-getUpdate :: IO TelOffset -> IO TelRequest
-getUpdate lastUpdateID = do 
-    token <- telegramToken
-    updateID <- lastUpdateID
-    let body = buildRequest botTelegramHost botTelegramPath token 
-    let suffics = updatesParametrs telegramLimit telegramTimeout (updateID + 1)
-    let update = body <> "/getUpdates" <> suffics          
-    return update 
-
-updateRequest :: TelRequest -> TelAllowedUpdates -> Request
-updateRequest updRequest allowUpdates = 
-    let request1 = parseRequest_ . BC.unpack $ updRequest
-    in  urlEncodedBody [("allowed_updates", (LBS.toStrict . encode) allowUpdates)] request1
+          
+getUpdate :: TelOffset -> Token -> TelRequest
+getUpdate lastUpdateID token =  let body = buildRequest botTelegramHost botTelegramPath token 
+                                    suffics = updatesParametrs telegramLimit telegramTimeout (lastUpdateID + 1) 
+                                in body <> "/getUpdates" <> suffics          
     
-prepareMessage :: SendingMethod -> IO TelRequest
-prepareMessage method = do
-    token <- telegramToken
-    let reg = buildRequest botTelegramHost botTelegramPath token
-    let request = reg <> method 
-    return request
-  
+makeUpdateRequest :: TelRequest -> Request
+makeUpdateRequest telRequest = 
+    let requestWithoutAllow = parseRequest_ . BC.unpack $ telRequest
+    in addToRequestQueryString [("allowed_updates", Just $ (LBS.toStrict . encode) allowUpdates)] requestWithoutAllow    
+   
+
+prepareMessage :: SendingMethod -> Token -> TelRequest
+prepareMessage method token = let reg = buildRequest botTelegramHost botTelegramPath token
+                              in reg <> method 
+ 
 
 sendMessage :: TelegramResponse -> IO ()
 sendMessage decodeUpdate = do 
+    token <- readToken
     unless (checkNullUpdate decodeUpdate) 
         (do let chat = getMessageChatID decodeUpdate 
             let cont = getMessageContent decodeUpdate
             let meth = getSendingMethod decodeUpdate 
             let ent = getMessageEntity decodeUpdate 
             let cap_ent = getMessageCaptionEntity decodeUpdate
-            request <- fmap (parseRequest_ . BC.unpack) (prepareMessage meth)
+            let request = (parseRequest_ . BC.unpack) (prepareMessage meth token)
             let requestForChat = addToRequestQueryString [("chat_id", Just chat)] request
             if (snd . head $ cont) /= Just BC.empty
             then do 
@@ -103,9 +99,9 @@ sendMessage decodeUpdate = do
                 let contForRepeat = makeRepeatMessage decodeUpdate mapOfUsers
                 let requestWithContent = addToRequestQueryString contForRepeat requestForChat
                 let requestWithKeyboard = 
-                     urlEncodedBody [ ("reply_markup"
-                                    , (LBS.toStrict . encode) defaultKeyboard)
-                                    ] requestWithContent
+                     addToRequestQueryString [ ("reply_markup"
+                                             , Just $ (LBS.toStrict . encode) defaultKeyboard)
+                                             ] requestWithContent
                 httpLBS requestWithKeyboard
                 return ()
         )   

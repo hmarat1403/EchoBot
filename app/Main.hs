@@ -15,10 +15,10 @@ import Parser ( getLastUpdateNumber
               )
 import Network.HTTP.Simple ( getResponseStatus, httpLBS )
 import Network.HTTP.Types (Status(..))
-import Request (getUpdate, sendMessage, updateRequest)
+import Request (getUpdate, sendMessage, makeUpdateRequest)
 import Data.IORef ( writeIORef, newIORef, readIORef )
 import Control.Monad (forever, forM_ )
-import Config (telegramAllowUpdates, telegramOffset, telegramUsers)
+import Config (telegramAllowUpdates, telegramOffset, telegramUsers, readToken)
 import Data.Maybe (fromJust, isJust)
 
 
@@ -27,8 +27,11 @@ main = do
     startNumber <- newIORef telegramOffset  
     usersList <- newIORef telegramUsers
     forever $ do
-        request <- getUpdate . readIORef $ startNumber
-        update <- httpLBS $ updateRequest request telegramAllowUpdates
+        token <- readToken
+        telOffset <- readIORef startNumber
+        let telRequest = getUpdate telOffset token 
+        let request = makeUpdateRequest telRequest
+        update <- httpLBS request 
         let code = statusCode . getResponseStatus $ update
         let error = statusMessage . getResponseStatus $ update
         if code == 200
