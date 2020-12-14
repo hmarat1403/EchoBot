@@ -72,12 +72,12 @@ defaultKeyboard = InlineKeyboardMarkUp { inline_keyboard =
                                       , [fiveButton]
                                       ]}
 oneButton :: InlineKeyboardButton
-oneButton = InlineKeyboardButton { text = "1", callback_data = "1" }
+oneButton = InlineKeyboardButton { text = "1", callback_data = Just "1" }
 twoButton :: InlineKeyboardButton
-twoButton = InlineKeyboardButton { text = "2", callback_data = "2" }
+twoButton = InlineKeyboardButton { text = "2", callback_data = Just "2" }
 threeButton :: InlineKeyboardButton
-threeButton = InlineKeyboardButton { text = "3", callback_data = "3" }
+threeButton = InlineKeyboardButton { text = "3", callback_data = Just "3" }
 forButton :: InlineKeyboardButton
-forButton = InlineKeyboardButton { text = "4", callback_data = "4" }
+forButton = InlineKeyboardButton { text = "4", callback_data = Just "4" }
 fiveButton :: InlineKeyboardButton
-fiveButton = InlineKeyboardButton { text = "5", callback_data = "5" }
+fiveButton = InlineKeyboardButton { text = "5", callback_data = Just "5" }

@@ -13,6 +13,7 @@ module Parser
     , MessageID
     , checkCallbackQuery
     , checkCommand
+    , checkNullUpdate
     , makeRepeatMessage
     , makeCopyMessage
     , getMessageEntity
@@ -43,11 +44,26 @@ import qualified Data.ByteString.Char8 as BC
 import qualified Data.ByteString.Lazy as LBC
 
 
-
 type ChatID = BC.ByteString
 type MessageID = BC.ByteString
 type SendingMethod = BC.ByteString
 type PrefixMessage = BC.ByteString
+
+
+getDecodeUpdate :: Response L.ByteString -> TelegramResponse    -- parse response from JSON
+getDecodeUpdate reseivingBC = let jsonBody = getResponseBody reseivingBC
+                                  telegramResponse = eitherDecode jsonBody
+                              in case telegramResponse of 
+                                    Left noDec -> error $ "can't decode last reseiving update: " <> noDec
+                                    Right res  -> res 
+
+checkNullUpdate :: TelegramResponse -> Bool
+checkNullUpdate = null . result
+
+getLastUpdateNumber :: TelegramResponse -> Int  
+getLastUpdateNumber newResponse = if checkNullUpdate newResponse
+                                  then 0
+                                  else update_id . head . result $ newResponse                                    
 
 checkCommand :: TelegramResponse -> Bool
 checkCommand newResponse = 
@@ -59,20 +75,20 @@ checkCommand newResponse =
     in maybe False checkJust maybeText
 
                
-checkCommandMessage :: Update -> Query
-checkCommandMessage update 
+checkCommandMessage :: TelegramResponse -> Query
+checkCommandMessage newResponse 
         | fromJust maybeText == "/help"           = [("text", Just defaultHelpMessage)]
         | fromJust maybeText == "/repeat"         = [("text", Just BC.empty)]
         | fromJust maybeText == "/getMyCommands"  = [("text", Just "[/help, /repeat, /getMyCommands]")]
-        | otherwise                               = makeCopyMessage chat mess 
-        where maybeText = message update >>= text
-              chat = getMessageChatID update    
-              mess = getMessageID update     
+        | otherwise                               = makeCopyMessage newResponse 
+        where maybeText = (message . head . result $ newResponse) >>= text
+              
 
                                              
-getSendingMethod :: Update -> SendingMethod
-getSendingMethod update = maybe "/SendMessage" parseMessageContent maybeMessage
+getSendingMethod :: TelegramResponse -> SendingMethod
+getSendingMethod newResponse = maybe "/SendMessage" parseMessageContent maybeMessage
     where maybeMessage = message update <|> channel_post update
+          update = head . result $ newResponse
           parseMessageContent input 
             | text input == Just "/help"           = "/SendMessage" 
             | text input == Just "/repeat"         = "/SendMessage"
@@ -84,18 +100,6 @@ checkCallbackQuery :: TelegramResponse -> Maybe Int
 checkCallbackQuery newResponse = fmap (read . T.unpack) (maybeCallback >>= _data )
     where maybeCallback = callback_query . head . result $ newResponse
 
-getDecodeUpdate :: Response L.ByteString -> TelegramResponse    -- parse response from JSON
-getDecodeUpdate reseivingBC = let jsonBody = getResponseBody reseivingBC
-                                  telegramResponse = eitherDecode jsonBody
-                              in case telegramResponse of 
-                                    Left noDec -> error $ "can't decode Update: " <> noDec
-                                    Right res  -> res 
-
-getLastUpdateNumber :: TelegramResponse -> Int  
-getLastUpdateNumber decodeUpdate =  
-            if null (result decodeUpdate) 
-            then 0
-            else update_id . head . result $ decodeUpdate 
 
 makeRepeatMessage:: TelegramResponse -> Map.Map Int Int -> Query  -- checking value of repeats and get message for sending
 makeRepeatMessage newResponse mapUsers = [("text", Just messageForRepeate)]  
@@ -106,40 +110,47 @@ makeRepeatMessage newResponse mapUsers = [("text", Just messageForRepeate)]
           defaultMessage = "Number of message repeats: 1 (default value)\n\
                         \Click on any button to set the value:\n"            
              
-makeCopyMessage :: ChatID -> MessageID -> Query
-makeCopyMessage chatID messageID = 
-    [ ("from_chat_id", Just chatID)
-    , ("message_id", Just messageID)
-    ]
+makeCopyMessage :: TelegramResponse -> Query
+makeCopyMessage newResponse =  [ ("from_chat_id", Just chatID)
+                               , ("message_id", Just messageID)] 
+    where chatID = getMessageChatID newResponse
+          messageID = getMessageID newResponse
+         
 
-getMessageContent :: Update -> Query  -- get query string fo answer
-getMessageContent update 
+getMessageContent :: TelegramResponse -> Query  -- get query string for answer
+getMessageContent newResponse
     | isJust $ callback_query update  = [("text", Just "Setting new value")]
     | otherwise                       = parseMessageContent maybeMessage
     where parseMessageContent input = if isJust $ input >>= text
-                                      then checkCommandMessage update
-                                      else makeCopyMessage chat mess 
+                                      then checkCommandMessage newResponse
+                                      else makeCopyMessage newResponse 
+          update = head . result $ newResponse
           maybeMessage = message update <|> channel_post update 
-          chat = getMessageChatID update    
-          mess = getMessageID update                                   
+                             
 
-getMessageChatID :: Update -> ChatID
-getMessageChatID update  
+getMessageChatID :: TelegramResponse -> ChatID
+getMessageChatID newResponse  
     | isJust $ message update         = BC.pack . show . _id . chat $ fromJust $ message update
     | isJust $ channel_post update    = BC.pack . show . _id . chat $ fromJust $ message update
     | isJust $ callback_query update  = BC.pack . show . id . _from $ fromJust $ callback_query update
     | otherwise                       = error "message don't reseived"
+    where update = head . result $ newResponse
 
-getMessageID :: Update -> MessageID
-getMessageID update 
+getMessageID :: TelegramResponse -> MessageID
+getMessageID newResponse 
     | isJust $ message update          = BC.pack . show . message_id $ fromJust $ message update
     | isJust $ channel_post update     = BC.pack . show . message_id $ fromJust $ message update
     | isJust $ callback_query update   = BC.pack . show . id . _from $ fromJust $ callback_query update
-    | otherwise                        = error "message don't reseived"              
+    | otherwise                        = error "message don't reseived"        
+    where update = head . result $ newResponse      
 
-getMessageEntity :: Maybe Message -> Query
-getMessageEntity input = [("entities", fmap (LBC.toStrict . encode . entities) input)]
+getMessageEntity :: TelegramResponse -> Query
+getMessageEntity newResponse = [("entities", fmap (LBC.toStrict . encode . entities) maybeMessage)]
+    where update = head . result $ newResponse
+          maybeMessage = message update <|> channel_post update
 
 
-getMessageCaptionEntity :: Maybe Message -> Query
-getMessageCaptionEntity input = [("caption_entities", fmap (LBC.toStrict . encode . caption_entities) input)]      
+getMessageCaptionEntity :: TelegramResponse -> Query
+getMessageCaptionEntity newResponse = [("caption_entities", fmap (LBC.toStrict . encode . caption_entities) maybeMessage)]  
+    where update = head . result $ newResponse
+          maybeMessage = message update <|> channel_post update    

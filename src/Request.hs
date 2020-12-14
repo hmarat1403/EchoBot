@@ -9,11 +9,12 @@ module Request ( buildRequest
 
 import Parser (getMessageCaptionEntity
               , getMessageEntity
-              ,  getMessageContent
+              , getMessageContent
               , SendingMethod
               , makeRepeatMessage
               , getMessageChatID
               , getSendingMethod
+              , checkNullUpdate
               )
 import Config ( readToken
               , telegramLimit
@@ -21,14 +22,14 @@ import Config ( readToken
               , defaultKeyboard
               )
 import Users (readMapFromFile)  
-import TelegramAPI (message, channel_post,  TelegramResponse (result))   
+import TelegramAPI (TelegramResponse ())   
 import qualified Data.Text as T
 import qualified Data.ByteString.Char8 as BC
 import qualified Data.ByteString.Lazy.Char8 as LBS (toStrict)         
 import Network.HTTP.Simple (addToRequestQueryString, httpLBS, parseRequest_, Request)
 import Data.Aeson (encode)
 import Network.HTTP.Conduit ( urlEncodedBody )
-import Control.Applicative (Alternative((<|>)))
+import Control.Monad (unless)
 
 
 
@@ -84,14 +85,12 @@ prepareMessage method = do
 
 sendMessage :: TelegramResponse -> IO ()
 sendMessage decodeUpdate = do 
-    if null (result decodeUpdate) 
-    then return ()
-    else do let telRes = head . result $ decodeUpdate
-            let chat = getMessageChatID telRes 
-            let cont = getMessageContent telRes
-            let meth = getSendingMethod telRes 
-            let ent = getMessageEntity $ message telRes <|> channel_post telRes
-            let cap_ent = getMessageCaptionEntity $ message telRes <|> channel_post telRes
+    unless (checkNullUpdate decodeUpdate) 
+        (do let chat = getMessageChatID decodeUpdate 
+            let cont = getMessageContent decodeUpdate
+            let meth = getSendingMethod decodeUpdate 
+            let ent = getMessageEntity decodeUpdate 
+            let cap_ent = getMessageCaptionEntity decodeUpdate
             request <- fmap (parseRequest_ . BC.unpack) (prepareMessage meth)
             let requestForChat = addToRequestQueryString [("chat_id", Just chat)] request
             if (snd . head $ cont) /= Just BC.empty
@@ -109,4 +108,4 @@ sendMessage decodeUpdate = do
                                     ] requestWithContent
                 httpLBS requestWithKeyboard
                 return ()
-           
+        )   

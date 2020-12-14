@@ -188,7 +188,7 @@ instance FromJSON InlineKeyboardMarkUp
 instance ToJSON InlineKeyboardMarkUp                           
 data InlineKeyboardButton = InlineKeyboardButton 
                       { text :: T.Text
-                      , callback_data :: T.Text
+                      , callback_data :: Maybe T.Text
                       } deriving (Generic, Show)
 instance FromJSON InlineKeyboardButton
 instance ToJSON InlineKeyboardButton                      
