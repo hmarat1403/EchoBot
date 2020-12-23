@@ -3,7 +3,7 @@
 module Parser
     ( getMessageContent
     , getSendingMethod
-    , getMessageChatID
+    , getChatID
     , getMessageID
     , getLastUpdateNumber
     , getDecodeUpdate
@@ -81,19 +81,20 @@ checkCommandMessage newResponse
         | fromJust maybeText == "/repeat"         = [("text", Just BC.empty)]
         | fromJust maybeText == "/getMyCommands"  = [("text", Just "[/help, /repeat, /getMyCommands]")]
         | otherwise                               = makeCopyMessage newResponse 
-        where maybeText = (message . head . result $ newResponse) >>= text
+        where maybeText = ((message . head . result $ newResponse) >>= text) 
+                      <|> ((channel_post . head . result $ newResponse) >>= text)
               
 
                                              
 getSendingMethod :: TelegramResponse -> SendingMethod
-getSendingMethod newResponse = maybe "/SendMessage" parseMessageContent maybeMessage
+getSendingMethod newResponse = maybe "/sendMessage" parseMessageContent maybeMessage
     where maybeMessage = message update <|> channel_post update
           update = head . result $ newResponse
           parseMessageContent input 
-            | text input == Just "/help"           = "/SendMessage" 
-            | text input == Just "/repeat"         = "/SendMessage"
-            | text input == Just "/getMyCommands"  = "/SendMessage"
-            | otherwise                            = "/CopyMessage"
+            | text input == Just "/help"           = "/sendMessage" 
+            | text input == Just "/repeat"         = "/sendMessage"
+            | text input == Just "/getMyCommands"  = "/sendMessage"
+            | otherwise                            = "/copyMessage"
                           
         
 checkCallbackQuery :: TelegramResponse -> Maybe Int          
@@ -112,9 +113,11 @@ makeRepeatMessage newResponse mapUsers = [("text", Just messageForRepeate)]
              
 makeCopyMessage :: TelegramResponse -> Query
 makeCopyMessage newResponse =  [ ("from_chat_id", Just chatID)
-                               , ("message_id", Just messageID)] 
-    where chatID = getMessageChatID newResponse
+                               , ("message_id", Just messageID)
+                               ] 
+    where chatID = getChatID newResponse
           messageID = getMessageID newResponse
+       
          
 
 getMessageContent :: TelegramResponse -> Query  -- get query string for answer
@@ -128,18 +131,18 @@ getMessageContent newResponse
           maybeMessage = message update <|> channel_post update 
                              
 
-getMessageChatID :: TelegramResponse -> ChatID
-getMessageChatID newResponse  
+getChatID :: TelegramResponse -> ChatID
+getChatID newResponse  
     | isJust $ message update         = BC.pack . show . _id . chat $ fromJust $ message update
-    | isJust $ channel_post update    = BC.pack . show . _id . chat $ fromJust $ message update
+    | isJust $ channel_post update    = BC.pack . show . _id . chat $ fromJust $ channel_post update
     | isJust $ callback_query update  = BC.pack . show . id . _from $ fromJust $ callback_query update
-    | otherwise                       = error "message don't reseived"
+    | otherwise                       = error "The bot cannot handle messages of this type"
     where update = head . result $ newResponse
 
 getMessageID :: TelegramResponse -> MessageID
 getMessageID newResponse 
     | isJust $ message update          = BC.pack . show . message_id $ fromJust $ message update
-    | isJust $ channel_post update     = BC.pack . show . message_id $ fromJust $ message update
+    | isJust $ channel_post update     = BC.pack . show . message_id $ fromJust $ channel_post update
     | isJust $ callback_query update   = BC.pack . show . id . _from $ fromJust $ callback_query update
     | otherwise                        = error "message don't reseived"        
     where update = head . result $ newResponse      
@@ -154,3 +157,6 @@ getMessageCaptionEntity :: TelegramResponse -> Query
 getMessageCaptionEntity newResponse = [("caption_entities", fmap (LBC.toStrict . encode . caption_entities) maybeMessage)]  
     where update = head . result $ newResponse
           maybeMessage = message update <|> channel_post update    
+
+
+          

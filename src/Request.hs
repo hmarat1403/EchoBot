@@ -12,7 +12,7 @@ import Parser (getMessageCaptionEntity
               , getMessageContent
               , SendingMethod
               , makeRepeatMessage
-              , getMessageChatID
+              , getChatID
               , getSendingMethod
               , checkNullUpdate
               )
@@ -29,9 +29,7 @@ import qualified Data.ByteString.Char8 as BC
 import qualified Data.ByteString.Lazy.Char8 as LBS (toStrict)         
 import Network.HTTP.Simple (addToRequestQueryString, httpLBS, parseRequest_, Request)
 import Data.Aeson (encode)
---import Network.HTTP.Conduit ( setQueryString )
 import Control.Monad (unless)
-
 
 
 type Host = BC.ByteString
@@ -82,12 +80,13 @@ sendMessage :: TelegramResponse -> IO ()
 sendMessage decodeUpdate = do 
     token <- readToken
     unless (checkNullUpdate decodeUpdate) 
-        (do let chat = getMessageChatID decodeUpdate 
+        (do let chat = getChatID decodeUpdate 
             let cont = getMessageContent decodeUpdate
             let meth = getSendingMethod decodeUpdate 
             let ent = getMessageEntity decodeUpdate 
             let cap_ent = getMessageCaptionEntity decodeUpdate
             let request = (parseRequest_ . BC.unpack) (prepareMessage meth token)
+            print request
             let requestForChat = addToRequestQueryString [("chat_id", Just chat)] request
             if (snd . head $ cont) /= Just BC.empty
             then do 
@@ -102,6 +101,7 @@ sendMessage decodeUpdate = do
                      addToRequestQueryString [ ("reply_markup"
                                              , Just $ (LBS.toStrict . encode) defaultKeyboard)
                                              ] requestWithContent
+                print requestWithKeyboard
                 httpLBS requestWithKeyboard
                 return ()
         )   
