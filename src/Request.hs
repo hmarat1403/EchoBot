@@ -86,7 +86,6 @@ sendMessage decodeUpdate = do
             let ent = getMessageEntity decodeUpdate 
             let cap_ent = getMessageCaptionEntity decodeUpdate
             let request = (parseRequest_ . BC.unpack) (prepareMessage meth token)
-            print request
             let requestForChat = addToRequestQueryString [("chat_id", Just chat)] request
             if (snd . head $ cont) /= Just BC.empty
             then do 
@@ -101,7 +100,6 @@ sendMessage decodeUpdate = do
                      addToRequestQueryString [ ("reply_markup"
                                              , Just $ (LBS.toStrict . encode) defaultKeyboard)
                                              ] requestWithContent
-                print requestWithKeyboard
                 httpLBS requestWithKeyboard
                 return ()
         )   
